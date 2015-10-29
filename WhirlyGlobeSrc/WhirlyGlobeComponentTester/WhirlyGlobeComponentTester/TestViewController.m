@@ -376,8 +376,23 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
 //    [self addMegaMarkers];
     
 //    [self markerTest2];
+    
+//    [self billboardTest];
   
     [baseViewC enable3dTouchSelection:self];
+}
+
+- (void)billboardTest
+{
+    float size = 2.4;
+    MaplyScreenObject *screenObj = [[MaplyScreenObject alloc] init];
+    [screenObj addImage:[UIImage imageNamed:@"veins_diffuse.png"] color:[UIColor whiteColor] size:CGSizeMake(size, size)];
+    [screenObj translateX:-size/2.0 y:-size/2.0];
+    MaplyBillboard *bboard = [[MaplyBillboard alloc] init];
+    bboard.screenObj = screenObj;
+    bboard.center = MaplyCoordinate3dMake(0, 0, -EarthRadius);
+    
+    [baseViewC addBillboards:@[bboard] desc:@{kMaplyBillboardOrient:kMaplyBillboardOrientEye}  mode:MaplyThreadCurrent];
 }
 
 - (void)markerOverlapTest
@@ -1125,7 +1140,8 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
     stickersObj = [baseViewC addStickers:stickers desc:desc];
 }
 
-static const bool CountryTextures = true;
+static const bool CountryTextures = false;
+static const bool SubdivisionTest = false;
 
 // Add country outlines.  Pass in the names of the geoJSON files
 - (void)addCountries:(NSArray *)names stride:(int)stride
@@ -1160,7 +1176,6 @@ static const bool CountryTextures = true;
                              NSString *vecName = [[wgVecObj attributes] objectForKey:@"ADMIN"];
                              wgVecObj.userObject = vecName;
                              NSMutableDictionary *desc = [NSMutableDictionary dictionaryWithDictionary:@{
-                                                                                                         kMaplyFilled: @(YES),
                                                                                                          kMaplySelectable: @YES
                                                                                                          }];
                              if (CountryTextures)
@@ -1169,7 +1184,18 @@ static const bool CountryTextures = true;
                                  desc[kMaplyVecTextureProjection] = kMaplyProjectionScreen;
                                  desc[kMaplyVecTexScaleX] = @(1.0/smileImage.size.width);
                                  desc[kMaplyVecTexScaleY] = @(1.0/smileImage.size.height);
+                                 desc[kMaplyFilled] = @(YES);
                              }
+                             
+                             // Note: Subdivision test
+                             if (SubdivisionTest)
+                             {
+                                 desc[kMaplyFilled] = @(YES);
+                                 desc[kMaplySubdivType] = kMaplySubdivGrid;
+                                 desc[kMaplySubdivEpsilon] = @(0.05);
+                                 desc[kMaplyColor] = [UIColor redColor];
+                             }
+                             
                              MaplyComponentObject *compObj = [baseViewC addVectors:[NSArray arrayWithObject:wgVecObj] desc:desc];
                              MaplyScreenLabel *screenLabel = [[MaplyScreenLabel alloc] init];
                              // Add a label right in the middle
@@ -1198,17 +1224,16 @@ static const bool CountryTextures = true;
              dispatch_async(dispatch_get_main_queue(),
                             ^{
                                 // Toss in all the labels at once, more efficient
-                                // Note: Debugging
-//                                MaplyComponentObject *autoLabelObj = [baseViewC addScreenLabels:locAutoLabels desc:
-//                                                                      @{kMaplyTextColor: [UIColor colorWithRed:0.85 green:0.85 blue:0.85 alpha:1.0],
-//                                                                            kMaplyFont: [UIFont systemFontOfSize:24.0],
-//                                                                         kMaplyTextOutlineColor: [UIColor blackColor],
-//                                                                          kMaplyTextOutlineSize: @(1.0),
-////                                                                               kMaplyShadowSize: @(1.0)
-//                                                                      } mode:MaplyThreadAny];
+                                MaplyComponentObject *autoLabelObj = [baseViewC addScreenLabels:locAutoLabels desc:
+                                                                      @{kMaplyTextColor: [UIColor colorWithRed:0.85 green:0.85 blue:0.85 alpha:1.0],
+                                                                            kMaplyFont: [UIFont systemFontOfSize:24.0],
+                                                                         kMaplyTextOutlineColor: [UIColor blackColor],
+                                                                          kMaplyTextOutlineSize: @(1.0),
+//                                                                               kMaplyShadowSize: @(1.0)
+                                                                      } mode:MaplyThreadAny];
 
                                 vecObjects = locVecObjects;
-//                                autoLabels = autoLabelObj;
+                                autoLabels = autoLabelObj;
                             });
 
          }
@@ -1479,6 +1504,8 @@ static const int NumMegaMarkers = 15000;
         layer.waitLoad = imageWaitLoad;
         layer.drawPriority = BaseEarthPriority;
         layer.singleLevelLoading = (startupMapType == Maply2DMap);
+//        layer.northPoleColor = [UIColor redColor];
+//        layer.southPoleColor = [UIColor greenColor];
         [layer setTesselationValues:tessValues];
         [baseViewC addLayer:layer];
         
@@ -1979,7 +2006,7 @@ static const int NumMegaMarkers = 15000;
 #endif
             } else if (![layerName compare:kMaplyWindTest])
             {
-                ParticleTileDelegate *partDelegate = [[ParticleTileDelegate alloc] initWithURL:@"http://tilesets.s3-website-us-east-1.amazonaws.com/wind_test/{dir}_tiles/{z}/{x}/{y}" minZoom:2 maxZoom:5 viewC:baseViewC];
+                ParticleTileDelegate *partDelegate = [[ParticleTileDelegate alloc] initWithURL:@"http://tilesets.s3-website-us-east-1.amazonaws.com/wind_test/{dir}_tiles/{z}/{x}/{y}.png" minZoom:2 maxZoom:5 viewC:baseViewC];
                 MaplyQuadPagingLayer *layer = [[MaplyQuadPagingLayer alloc] initWithCoordSystem:partDelegate.coordSys delegate:partDelegate];
                 layer.flipY = false;
 
