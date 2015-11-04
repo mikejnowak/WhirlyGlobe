@@ -668,7 +668,10 @@ void TileBuilder::generateDrawables(WhirlyKit::ElevationDrawInfo *drawInfo,Basic
                 {
                     Point3d pt = locs[(iy*(sphereTessX+1)+ix)];
                     poleChunk->addPoint(Point3d(pt-drawInfo->chunkMidDisp));
-                    poleChunk->addNormal(Point3d(0,0,1.0));
+                    if (drawInfo->coordAdapter->isFlat())
+                        poleChunk->addNormal(Point3d(0,0,1.0));
+                    else
+                        poleChunk->addNormal(pt);
                     if (separatePoleChunk)
                         poleChunk->addColor(northPoleColor);
                     else
@@ -706,7 +709,10 @@ void TileBuilder::generateDrawables(WhirlyKit::ElevationDrawInfo *drawInfo,Basic
                 {
                     Point3d pt = locs[(iy*(sphereTessX+1)+ix)];
                     poleChunk->addPoint(Point3d(pt-drawInfo->chunkMidDisp));
-                    poleChunk->addNormal(Point3d(0,0,-1.0));
+                    if (drawInfo->coordAdapter->isFlat())
+                        poleChunk->addNormal(Point3d(0,0,1.0));
+                    else
+                        poleChunk->addNormal(pt);
                     if (separatePoleChunk)
                         poleChunk->addColor(southPoleColor);
                     else
@@ -1047,8 +1053,8 @@ bool LoadedTile::addToScene(TileBuilder *tileBuilder,std::vector<WhirlyKitLoaded
                         draw->applySubTexture(-1,subTexs[0]);
                     if (skirtDraw)
                         skirtDraw->applySubTexture(-1,subTexs[0]);
-                    if (poleDraw)
-                        poleDraw->applySubTexture(-1,subTexs[0]);
+//                    if (poleDraw)
+//                        poleDraw->applySubTexture(-1,subTexs[0]);
                 }
                 
                 delete tex;
@@ -1263,8 +1269,8 @@ void LoadedTile::updateContents(TileBuilder *tileBuilder,LoadedTile *childTiles[
                             childDraw->setTexId(0,texIds[0]);
                             if (childSkirtDraw)
                                 childSkirtDraw->setTexId(0,texIds[0]);
-                            if (childPoleDraw)
-                                childPoleDraw->setTexId(0,texIds[0]);
+//                            if (childPoleDraw)
+//                                childPoleDraw->setTexId(0,texIds[0]);
                         }
                         if (tileBuilder->texAtlas)
                         {
@@ -1272,8 +1278,8 @@ void LoadedTile::updateContents(TileBuilder *tileBuilder,LoadedTile *childTiles[
                                 childDraw->applySubTexture(-1,subTexs[0]);
                             if (childSkirtDraw && !subTexs.empty())
                                 childSkirtDraw->applySubTexture(-1,subTexs[0]);
-                            if (childPoleDraw && !subTexs.empty())
-                                childPoleDraw->applySubTexture(-1,subTexs[0]);
+//                            if (childPoleDraw && !subTexs.empty())
+//                                childPoleDraw->applySubTexture(-1,subTexs[0]);
                         }
                         if (tileBuilder->drawAtlas)
                         {
@@ -1328,14 +1334,16 @@ void LoadedTile::updateContents(TileBuilder *tileBuilder,LoadedTile *childTiles[
             if (poleDraw)
             {
                 poleDrawId = poleDraw->getId();
-                if (!texIds.empty())
-                    poleDraw->setTexId(0,texIds[0]);
+//                if (!texIds.empty())
+//                    poleDraw->setTexId(0,texIds[0]);
             }
             if (tileBuilder->texAtlas)
             {
                 draw->applySubTexture(-1,subTexs[0]);
                 if (skirtDraw)
                     skirtDraw->applySubTexture(-1,subTexs[0]);
+//                if (poleDraw)
+//                    poleDraw->applySubTexture(-1,subTexs[0]);
             }
             if (tileBuilder->drawAtlas)
             {

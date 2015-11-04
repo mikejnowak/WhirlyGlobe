@@ -115,6 +115,7 @@
                   kMaplyTestLoftedPoly: @(NO),
                   kMaplyTestQuadMarkers: @(NO),
                   kMaplyTestMegaMarkers: @(NO),
+                  kMaplyTestMarkerCluster: @(NO),
                   kMaplyTestLatLon: @(NO),
                   kMaplyTestRoads: @(NO),
                   kMaplyTestArcGIS: @(NO),
@@ -136,8 +137,7 @@
               kMaplyTestOWM: @(NO),
               kMaplyTestForecastIO: @(NO),
               kMaplyTestMapboxStreets: @(NO),
-              kMaplyMapzenVectors: @(NO),
-              kMaplyWindTest: @(NO)
+              kMaplyMapzenVectors: @(NO)
               }
                                    singleSelect:false],
            [ConfigSection ConfigSectionWithName:kMaplyTestCategoryObjects
@@ -150,6 +150,7 @@
               kMaplyTestCountry: @(NO),
               kMaplyTestQuadMarkers: @(NO),
               kMaplyTestMegaMarkers: @(NO),
+              kMaplyTestMarkerCluster: @(NO),
               kMaplyTestLatLon: @(NO),
               kMaplyTestRoads: @(NO),
               kMaplyTestArcGIS: @(NO),

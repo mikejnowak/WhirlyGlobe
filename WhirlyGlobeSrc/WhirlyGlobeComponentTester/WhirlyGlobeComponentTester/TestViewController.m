@@ -112,6 +112,7 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
     MaplyComponentObject *arcGisObj;
     NSArray *vecObjects;
     MaplyComponentObject *megaMarkersObj;
+    MaplyComponentObject *markerClusterObj;
     NSArray *megaMarkersImages;
     MaplyComponentObject *autoLabels;
     MaplyActiveObject *animSphere;
@@ -636,9 +637,15 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
         tileSource.transparent = true;
         MaplyQuadImageTilesLayer *imageLayer = [[MaplyQuadImageTilesLayer alloc] initWithCoordSystem:coordSys tileSource:tileSource];
         imageLayer.coverPoles = false;
-        imageLayer.handleEdges = true;
+        imageLayer.handleEdges = false;
         imageLayer.requireElev = requireElev;
         imageLayer.waitLoad = imageWaitLoad;
+        imageLayer.drawPriority = BaseEarthPriority + 1000;
+        if (startupMapType == Maply2DMap)
+        {
+            imageLayer.singleLevelLoading = true;
+            imageLayer.multiLevelLoads = @[@(-2)];
+        }
         [baseViewC addLayer:imageLayer];
         
         if (ovlName)
@@ -710,7 +717,7 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
         }
     }
     
-    screenMarkersObj = [baseViewC addScreenMarkers:markers desc:@{kMaplyDrawPriority: @(100), kMaplyClusterGroup: @(0)}];
+    screenMarkersObj = [baseViewC addScreenMarkers:markers desc:@{kMaplyDrawPriority: @(100)}];
 }
 
 // Add 3D markers
@@ -1377,14 +1384,50 @@ static const int NumMegaMarkers = 15000;
                marker.image = [markerImages objectAtIndex:random()%NumMegaMarkerImages];
                marker.size = CGSizeMake(16,16);
                marker.loc = MaplyCoordinateMakeWithDegrees(drand48()*360-180, drand48()*140-70);
-//               marker.layoutImportance = MAXFLOAT;
-               marker.layoutImportance = 1.0;
+               marker.layoutImportance = MAXFLOAT;
+//               marker.layoutImportance = 1.0;
                [markers addObject:marker];
            }
 
            megaMarkersObj = [baseViewC addScreenMarkers:markers desc:@{kMaplyClusterGroup: @(0)} mode:MaplyThreadCurrent];
            megaMarkersImages = markerImages;
        }
+    );
+}
+
+// Number of degrees around a given point to spread out random markers
+static const float MarkerSpread = 2.0;
+
+// Make up a large number of markers and add them
+- (void)addMarkerCluster:(LocationInfo *)locations num:(int)howMany markersPer:(int)markersPer
+{
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
+    ^{
+        NSMutableArray *markers = [NSMutableArray array];
+        UIImage *pinImage = [UIImage imageNamed:@"map_pin"];
+
+        // Work through the locations
+        for (unsigned int ii=0;ii<howMany;ii++)
+        {
+            LocationInfo *location = &locations[ii];
+            
+            int howMany = markersPer/2.0 + markersPer * drand48() / 2.0;
+            
+            // Make up a few markers per location
+            for (unsigned int jj=0;jj<howMany;jj++)
+            {
+                MaplyScreenMarker *marker = [[MaplyScreenMarker alloc] init];
+                marker.image = pinImage;
+                marker.size = CGSizeMake(32,32);
+                marker.loc = MaplyCoordinateMakeWithDegrees(location->lon + drand48()*MarkerSpread, location->lat + drand48()*MarkerSpread);
+                marker.layoutImportance = 1.0;
+                marker.userObject = [NSString stringWithFormat:@"%s %d",location->name,jj];
+                [markers addObject:marker];
+            }
+        }
+       
+       markerClusterObj = [baseViewC addScreenMarkers:markers desc:@{kMaplyClusterGroup: @(0)} mode:MaplyThreadCurrent];
+    }
     );
 }
 
@@ -1504,7 +1547,7 @@ static const int NumMegaMarkers = 15000;
         layer.waitLoad = imageWaitLoad;
         layer.drawPriority = BaseEarthPriority;
         layer.singleLevelLoading = (startupMapType == Maply2DMap);
-//        layer.northPoleColor = [UIColor redColor];
+//        layer.northPoleColor = [UIColor whiteColor];
 //        layer.southPoleColor = [UIColor greenColor];
         [layer setTesselationValues:tessValues];
         [baseViewC addLayer:layer];
@@ -1550,7 +1593,11 @@ static const int NumMegaMarkers = 15000;
         [baseViewC addLayer:layer];
         layer.drawPriority = BaseEarthPriority;
         layer.waitLoad = imageWaitLoad;
-        layer.singleLevelLoading = (startupMapType == Maply2DMap);
+        if (startupMapType == Maply2DMap)
+        {
+            layer.singleLevelLoading = true;
+            layer.multiLevelLoads = @[@(-4), @(-2)];
+        }
         baseLayer = layer;
         screenLabelColor = [UIColor whiteColor];
         screenLabelBackColor = [UIColor whiteColor];
@@ -1574,7 +1621,11 @@ static const int NumMegaMarkers = 15000;
         layer.requireElev = requireElev;
         layer.waitLoad = imageWaitLoad;
         layer.maxTiles = maxLayerTiles;
-        layer.singleLevelLoading = (startupMapType == Maply2DMap);
+        if (startupMapType == Maply2DMap)
+        {
+            layer.singleLevelLoading = true;
+            layer.multiLevelLoads = @[@(-4), @(-2)];
+        }
         [layer setTesselationValues:tessValues];
         [baseViewC addLayer:layer];
         layer.drawPriority = BaseEarthPriority;
@@ -2288,6 +2339,18 @@ static const int NumMegaMarkers = 15000;
             [baseViewC removeObject:megaMarkersObj];
             [baseViewC removeTextures:megaMarkersImages mode:MaplyThreadAny];
             megaMarkersObj = nil;
+        }
+    }
+
+    if ([configViewC valueForSection:kMaplyTestCategoryObjects row:kMaplyTestMarkerCluster])
+    {
+        if (!markerClusterObj)
+            [self addMarkerCluster:locations num:NumLocations markersPer:120];
+    } else {
+        if (markerClusterObj)
+        {
+            [baseViewC removeObject:markerClusterObj];
+            markerClusterObj = nil;
         }
     }
 
