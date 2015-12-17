@@ -206,6 +206,9 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
     // Configuration controller for turning features on and off
     configViewC = [[ConfigViewController alloc] initWithNibName:@"ConfigViewController" bundle:nil];
     configViewC.configOptions = ConfigOptionsAll;
+    
+    // Note: Debugging British National Grid
+    bool bngTest = true;
 
     // Create an empty globe or map controller
     zoomLimit = 0;
@@ -238,6 +241,19 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
             mapViewC.delegate = self;
             baseViewC = mapViewC;
             configViewC.configOptions = ConfigOptionsFlat;
+            break;
+        case Maply2DBNG:
+            mapViewC = [[MaplyViewController alloc] initWithMapType:MaplyMapTypeFlat];
+            mapViewC.coordSys = [self buildBritishNationalGrid:true];
+            mapViewC.viewWrap = false;
+            mapViewC.doubleTapZoomGesture = true;
+            mapViewC.twoFingerTapGesture = true;
+            mapViewC.delegate = self;
+            baseViewC = mapViewC;
+            configViewC.configOptions = ConfigOptionsFlat;
+            
+            startupMapType = Maply2DMap;
+            bngTest = true;
             break;
 //        case MaplyScrollViewMap:
 //            break;
@@ -288,6 +304,26 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
         [mapViewC animateToPosition:MaplyCoordinateMakeWithDegrees(-122.4192, 37.7793) time:1.0];
     }
     
+    // Note: Debugging British National Grid
+    if (bngTest)
+    {
+        // We have to tweak the extents or we end up locked into place when we zoom out.
+//        [mapViewC setViewExtentsLL:MaplyCoordinateMake(-1000000, -1000000) ur:MaplyCoordinateMake(2000000, -2000000)];
+
+        // Add a marker near London
+        MaplyScreenMarker *marker = [[MaplyScreenMarker alloc] init];
+        marker.image = [UIImage imageNamed:@"map_pin"];
+        marker.loc = MaplyCoordinateMakeWithDegrees(-0.1275, 51.507222);
+        marker.size = CGSizeMake(40, 40);
+        marker.selectable = true;
+        marker.userObject = @"London";
+        [baseViewC addScreenMarkers:@[marker] desc:nil mode:MaplyThreadAny];
+        
+        MaplyCoordinate localLondon = [mapViewC.coordSys geoToLocal:MaplyCoordinateMakeWithDegrees(-0.1275, 51.507222)];
+        
+        [mapViewC setPosition:localLondon height:2.0];
+    }
+    
     // Note: Debugging
 //    if (globeViewC)
 //    {
@@ -313,10 +349,11 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
         baseViewC.clearColor = [UIColor colorWithWhite:0.5 alpha:1.0];
 
         // Cesium as an elevation source
-        MaplyRemoteTileElevationCesiumSource *cesiumElev = [[MaplyRemoteTileElevationCesiumSource alloc] initWithBaseURL:@"http://cesiumjs.org/stk-terrain/tilesets/world/tiles/" ext:@"terrain" minZoom:0 maxZoom:16];
+        MaplyRemoteTileElevationCesiumSource *cesiumElev = [[MaplyRemoteTileElevationCesiumSource alloc] initWithBaseURL:@"http://assets.agi.com/stk-terrain/tilesets/world/tiles/" ext:@"terrain" minZoom:0 maxZoom:16];
         elevSource = cesiumElev;
         cesiumElev.cacheDir = [NSString stringWithFormat:@"%@/cesiumElev/",cacheDir];
-
+//        elevSource = [[MaplyElevationDatabase alloc] initWithName:@"world_web_mercator"];
+        
         baseViewC.elevDelegate = elevSource;
         zoomLimit = 16;
         requireElev = true;
@@ -331,6 +368,7 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
         // Set up their odd tiling system
         MaplyCesiumCoordSystem *cesiumCoordSys = [[MaplyCesiumCoordSystem alloc] init];
         MaplyAnimationTestTileSource *tileSource = [[MaplyAnimationTestTileSource alloc] initWithCoordSys:cesiumCoordSys minZoom:1 maxZoom:16 depth:1];
+//        MaplyAnimationTestTileSource *tileSource = [[MaplyAnimationTestTileSource alloc] initWithCoordSys:[[MaplySphericalMercator alloc] initWebStandard] minZoom:0 maxZoom:16 depth:1];
         tileSource.useDelay = false;
         tileSource.transparentMode = false;
         tileSource.pixelsPerSide = 128;
@@ -347,8 +385,8 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
 //        mapViewC.height = 1.0;
 //        [mapViewC animateToPosition:MaplyCoordinateMakeWithDegrees(86.925278, 27.988056) time:1.0];
         
-        [self addSun];
-        [self addStars:@"starcatalog_short"];
+//        [self addSun];
+//        [self addStars:@"starcatalog_short"];
     }
     
     // Force the view to load so we can get the default switch values
@@ -372,13 +410,7 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
     
 //    [self performSelector:@selector(labelMarkerTest:) withObject:@(0.1) afterDelay:0.1];
 
-//    [self markerOverlapTest];
-    
-//    [self addMegaMarkers];
-    
-//    [self markerTest2];
-    
-//    [self billboardTest];
+    [self addGeoJson:@"sawtooth.geojson"];
   
     [baseViewC enable3dTouchSelection:self];
 }
@@ -394,6 +426,36 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
     bboard.center = MaplyCoordinate3dMake(0, 0, -EarthRadius);
     
     [baseViewC addBillboards:@[bboard] desc:@{kMaplyBillboardOrient:kMaplyBillboardOrientEye}  mode:MaplyThreadCurrent];
+}
+
+
+/* Build two different versions of BNG.  One can go out larger than the other.
+    If display is set, we'll allow a bigger bounding box.
+ */
+- (MaplyCoordinateSystem *)buildBritishNationalGrid:(bool)display
+{
+    // Set up the proj4 string including the local grid file
+    NSString *proj4Str = [NSString stringWithFormat:@"+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +nadgrids=%@ +units=m +no_defs",[[NSBundle mainBundle] pathForResource:@"OSTN02_NTv2" ofType:@"gsb"]];
+    MaplyProj4CoordSystem *coordSys = [[MaplyProj4CoordSystem alloc] initWithString:proj4Str];
+    
+    // Set the bounding box for validity.  It assumes it can go everywhere by default
+    MaplyBoundingBox bbox;
+    bbox.ll.x = 1393.0196;    bbox.ll.y = 13494.9764;
+    bbox.ur.x = 671196.3657;    bbox.ur.y = 1230275.0454;
+    
+    // Now expand it out so we can see the whole of the UK
+    if (display)
+    {
+        double spanX = bbox.ur.x - bbox.ll.x;
+        double spanY = bbox.ur.y - bbox.ur.x;
+        double extra = 1.0;
+        bbox.ll.x -= extra*spanX;  bbox.ll.y -= extra*spanY;
+        bbox.ur.x += extra*spanX;  bbox.ur.y += extra*spanY;
+    }
+    
+    [coordSys setBounds:bbox];
+    
+    return coordSys;
 }
 
 - (void)markerOverlapTest
@@ -502,12 +564,16 @@ static const int BaseEarthPriority = kMaplyImageLayerDrawPriorityDefault;
         label2.userObject = @"Test Label 2";
         //        label1.rotation = M_PI/2;
         [labels addObject:label2];
-}
+    }
     
     NSMutableArray *newObjs = [NSMutableArray array];
 //    [newObjs addObject:[baseViewC addScreenMarkers:redMarkers desc:@{kMaplyDrawPriority: @(100)} mode:MaplyThreadCurrent]];
 //    [newObjs addObject:[baseViewC addScreenMarkers:blueMarkers desc:@{kMaplyDrawPriority: @(101)} mode:MaplyThreadCurrent]];
-    [newObjs addObject:[baseViewC addScreenLabels:labels desc:@{kMaplyDrawPriority: @(102), kMaplyFont: [UIFont systemFontOfSize:30.0]} mode:MaplyThreadCurrent]];
+    [newObjs addObject:[baseViewC addScreenLabels:labels desc:
+                        @{kMaplyDrawPriority: @(102),
+                          kMaplyFont: [UIFont systemFontOfSize:30.0],
+                          kMaplyBackgroundColor: [UIColor blueColor]
+                          } mode:MaplyThreadCurrent]];
     
 //    [self performSelector:@selector(labelMarkerTest:) withObject:time afterDelay:[time floatValue]];
 }
@@ -1715,6 +1781,7 @@ static const float MarkerSpread = 2.0;
         vecColor = [UIColor blackColor];
         vecWidth = 4.0;
         MaplyAnimationTestTileSource *tileSource = [[MaplyAnimationTestTileSource alloc] initWithCoordSys:[[MaplySphericalMercator alloc] initWebStandard] minZoom:0 maxZoom:22 depth:1];
+//        MaplyAnimationTestTileSource *tileSource = [[MaplyAnimationTestTileSource alloc] initWithCoordSys:[[MaplySphericalMercator alloc] initWebStandard] minZoom:0 maxZoom:22 depth:1];
         tileSource.pixelsPerSide = 256;
         tileSource.transparentMode = true;
         MaplyQuadImageTilesLayer *layer = [[MaplyQuadImageTilesLayer alloc] initWithCoordSystem:tileSource.coordSys tileSource:tileSource];
@@ -1722,6 +1789,8 @@ static const float MarkerSpread = 2.0;
         layer.requireElev = requireElev;
         layer.maxTiles = 512;
         layer.handleEdges = true;
+        layer.flipY = true;
+        
 //        layer.color = [UIColor colorWithWhite:0.5 alpha:0.5];
         if (startupMapType == Maply2DMap)
         {
@@ -1819,6 +1888,7 @@ static const float MarkerSpread = 2.0;
              tileSource.cacheDir = thisCacheDir;
              if (zoomLimit != 0 && zoomLimit < tileSource.maxZoom)
                  tileSource.tileInfo.maxZoom = zoomLimit;
+
              MaplyQuadImageTilesLayer *layer = [[MaplyQuadImageTilesLayer alloc] initWithCoordSystem:tileSource.coordSys tileSource:tileSource];
              layer.handleEdges = true;
              layer.waitLoad = imageWaitLoad;
@@ -2062,6 +2132,29 @@ static const float MarkerSpread = 2.0;
                 layer.flipY = false;
 
                 [baseViewC addLayer:layer];
+                ovlLayers[layerName] = layer;
+            } else if (![layerName compare:kMaplyOrdnanceSurveyTest])
+            {
+                MaplyCoordinateSystem *bngCoordSys = [self buildBritishNationalGrid:false];
+                MaplyAnimationTestTileSource *tileSource = [[MaplyAnimationTestTileSource alloc] initWithCoordSys:bngCoordSys minZoom:0 maxZoom:22 depth:1];
+                //        MaplyAnimationTestTileSource *tileSource = [[MaplyAnimationTestTileSource alloc] initWithCoordSys:[[MaplySphericalMercator alloc] initWebStandard] minZoom:0 maxZoom:22 depth:1];
+                tileSource.pixelsPerSide = 128;
+                tileSource.transparentMode = true;
+                MaplyQuadImageTilesLayer *layer = [[MaplyQuadImageTilesLayer alloc] initWithCoordSystem:tileSource.coordSys tileSource:tileSource];
+                layer.maxTiles = 256;
+                layer.handleEdges = false;
+                layer.flipY = true;
+                layer.coverPoles = false;
+                
+                //        layer.color = [UIColor colorWithWhite:0.5 alpha:0.5];
+                if (startupMapType == Maply2DMap)
+                {
+                    layer.useTargetZoomLevel = true;
+                    layer.singleLevelLoading = true;
+                    layer.multiLevelLoads = @[@(-2)];
+                }
+                [baseViewC addLayer:layer];
+                layer.drawPriority = BaseEarthPriority+100;
                 ovlLayers[layerName] = layer;
             }
         }

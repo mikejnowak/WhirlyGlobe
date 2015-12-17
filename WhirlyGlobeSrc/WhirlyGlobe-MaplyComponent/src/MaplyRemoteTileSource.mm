@@ -57,7 +57,7 @@ static bool trackConnections = false;
     _pixelsPerSide = 256;
     _timeOut = 0.0;
     _coordSys = [[MaplySphericalMercator alloc] initWebStandard];
-    replaceURL = [baseURL containsString:@"{z}"] && [baseURL containsString:@"{x}"] && [baseURL containsString:@"{y}"];
+    replaceURL = [baseURL containsString:@"{y}"] && [baseURL containsString:@"{x}"]; // && [baseURL containsString:@"{z}"];
     
     return self;
 }
@@ -152,7 +152,7 @@ static bool trackConnections = false;
         cacheInit = true;
     }
     
-    NSString *localName = [NSString stringWithFormat:@"%@/%d_%d_%d.%@",_cacheDir,tileID.level,tileID.x,tileID.y,_ext];
+    NSString *localName = [NSString stringWithFormat:@"%@/%d_%d_%d.%@",_cacheDir,tileID.level,tileID.x,tileID.y,(_ext ? _ext : @"unk")];
     return localName;
 }
 
@@ -420,6 +420,9 @@ static bool trackConnections = false;
                     tileData = [_delegate remoteTileSource:self modifyTileReturn:tileData forTile:tileID];
                 }
             }
+            
+            if (tileData)
+                return tileData;
         }
         
     }

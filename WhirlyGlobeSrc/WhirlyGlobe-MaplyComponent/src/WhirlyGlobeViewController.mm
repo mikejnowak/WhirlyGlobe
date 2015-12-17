@@ -672,6 +672,20 @@ using namespace WhirlyGlobe;
     globeView.delegate = animateRotation;        
 }
 
+- (void)rotateToPointD:(Point2d)whereGeo time:(NSTimeInterval)howLong
+{
+    // If we were rotating from one point to another, stop
+    [globeView cancelAnimation];
+    
+    // Construct a quaternion to rotate from where we are to where
+    //  the user tapped
+    Eigen::Quaterniond newRotQuat = [globeView makeRotationToGeoCoordD:whereGeo keepNorthUp:panDelegate.northUp];
+    
+    // Rotate to the given position over time
+    animateRotation = [[AnimateViewRotation alloc] initWithView:globeView rot:newRotQuat howLong:howLong];
+    globeView.delegate = animateRotation;
+}
+
 // External facing version of rotateToPoint
 - (void)animateToPosition:(WGCoordinate)newPos time:(NSTimeInterval)howLong
 {
@@ -784,6 +798,22 @@ using namespace WhirlyGlobe;
     globeView.heightAboveGlobe = height;
 }
 
+- (void)setPositionD:(MaplyCoordinateD)newPos height:(double)height
+{
+    if (isnan(newPos.x) || isnan(newPos.y) || isnan(height))
+    {
+        NSLog(@"WhirlyGlobeViewController: Invalid location passed to setPosition:");
+        return;
+    }
+    
+    // Note: This might conceivably be a problem, though I'm not sure how.
+    [self rotateToPoint:GeoCoord(newPos.x,newPos.y) time:0.0];
+    globeView.heightAboveGlobe = height;
+    // If there's a pinch delegate, ask it to calculate the height.
+    if (tiltControlDelegate)
+        self.tilt = [tiltControlDelegate tiltFromHeight:globeView.heightAboveGlobe];
+}
+
 - (void)setHeading:(float)heading
 {
     if (isnan(heading))
@@ -834,7 +864,14 @@ using namespace WhirlyGlobe;
 	return {.x = geoCoord.lon(), .y = geoCoord.lat()};
 }
 
-- (float)getHeight
+- (MaplyCoordinateD)getPositionD
+{
+	Point2d geoCoord = globeView.coordAdapter->getCoordSystem()->localToGeographicD(globeView.coordAdapter->displayToLocal([globeView currentUp]));
+
+	return {.x = geoCoord.x(), .y = geoCoord.y()};
+}
+
+- (double)getHeight
 {
 	return globeView.heightAboveGlobe;
 }
@@ -845,6 +882,14 @@ using namespace WhirlyGlobe;
     Point3d localPt = [globeView currentUp];
     GeoCoord geoCoord = globeView.coordAdapter->getCoordSystem()->localToGeographic(globeView.coordAdapter->displayToLocal(localPt));
     pos->x = geoCoord.lon();  pos->y = geoCoord.lat();
+}
+
+- (void)getPositionD:(MaplyCoordinateD *)pos height:(double *)height
+{
+    *height = globeView.heightAboveGlobe;
+    Point3d localPt = [globeView currentUp];
+    Point2d geoCoord = globeView.coordAdapter->getCoordSystem()->localToGeographicD(globeView.coordAdapter->displayToLocal(localPt));
+    pos->x = geoCoord.x();  pos->y = geoCoord.y();
 }
 
 // Called back on the main thread after the interaction thread does the selection
