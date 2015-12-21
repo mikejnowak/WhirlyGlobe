@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 7/21/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -32,6 +32,10 @@ typedef struct
     float x,y;
 } MaplyCoordinate;
 
+
+static const MaplyCoordinate kMaplyNullCoordinate = {.x = FLT_MIN, .y = FLT_MIN};
+
+
 /** @typedef struct MaplyCoordinateD
     @brief Double precision version of 2D coordinate.
     @details This works the same was as the MaplyCoordinate, but has
@@ -41,6 +45,9 @@ typedef struct
 {
     double x,y;
 } MaplyCoordinateD;
+
+static const MaplyCoordinateD kMaplyNullCoordinateD = {.x = DBL_MIN, .y = DBL_MIN};
+
 
 /** @typedef struct MaplyCoordinate3d
     @brief A 3D coordinate representation.
@@ -53,6 +60,19 @@ typedef struct
     float x,y,z;
 } MaplyCoordinate3d;
 
+/** @brief An NSObject based wrapper for 3D coordinates.
+    @details This wrapper encapsulates a MaplyCoordinate3d so we can pass them around in NSDictionary objects.
+  */
+@interface MaplyCoordinate3dWrapper : NSObject
+
+/// @brief Initialize with a 3D coordinate
+- (instancetype)initWithCoord:(MaplyCoordinate3d)coord;
+
+/// @brief 3D coordinate
+@property (nonatomic,readonly) MaplyCoordinate3d coord;
+
+@end
+
 /** @typedef struct MaplyBoundingBox
     @brief Represents a bounding box in a particular coordinate system.
     @details ll is the lower left and ur is the upper right.
@@ -62,6 +82,26 @@ typedef struct
     MaplyCoordinate ll;
     MaplyCoordinate ur;
 } MaplyBoundingBox;
+
+static const MaplyBoundingBox kMaplyNullBoundingBox = {
+	.ll = {.x = FLT_MIN, .y = FLT_MIN},
+	.ur = {.x = FLT_MIN, .y = FLT_MIN}
+};
+
+/** @typedef struct MaplyBoundingBox
+ @brief Represents a bounding box in a particular coordinate system.
+ @details ll is the lower left and ur is the upper right.
+ */
+typedef struct
+{
+	MaplyCoordinateD ll;
+	MaplyCoordinateD ur;
+} MaplyBoundingBoxD;
+
+static const MaplyBoundingBoxD kMaplyNullBoundingBoxD = {
+	.ll = {.x = DBL_MIN, .y = DBL_MIN},
+	.ur = {.x = DBL_MIN, .y = DBL_MIN}
+};
 
 #if __cplusplus
 extern "C" {

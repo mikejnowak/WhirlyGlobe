@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/4/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@
  @param maxZoom The maximum zoom level to fetch.
  @return The MaplyRemoteTileSource object or nil on failure.
  */
-- (id)initWithBaseURL:(NSString *)baseURL ext:(NSString *)ext minZoom:(int)minZoom maxZoom:(int)maxZoom;
+- (nonnull instancetype)initWithBaseURL:(NSString *__nonnull)baseURL ext:(NSString *__nullable)ext minZoom:(int)minZoom maxZoom:(int)maxZoom;
 
 /** @brief Initialize from a remote tile spec.
  @details This version of the initializer takes an NSDictionary parsed
@@ -49,13 +49,13 @@
  be trusted.
  @param jsonSpec An NSDictionary parsed from the JSON tile spec.
  */
-- (id)initWithTilespec:(NSDictionary *)jsonSpec;
+- (nullable instancetype)initWithTilespec:(NSDictionary *__nonnull)jsonSpec;
 
 /** @brief The base URL we're fetching from.
  @details This is typically the top of the pyramid and we'll
  tack on the level, row, and column to form a full URL.
  */
-@property (nonatomic,readonly) NSString *baseURL;
+@property (nonatomic,readonly,nonnull) NSString *baseURL;
 
 /** @brief The minimum zoom level available.
  @details This is the lowest level we'll try to fetch.  Any levels below that will be filled in with placeholders.  Those are empty, but they allow us to load tiles beneath.
@@ -75,7 +75,7 @@
  image type.  It's typically @"png" or @"jpg", but it
  can be anything that UIImage will recognize.
  */
-@property (nonatomic, strong) NSString *ext;
+@property (nonatomic, strong, nonnull) NSString *ext;
 
 /** @brief The timeout assigned to the NSMutableURLRequest we're using to fetch tiles.
  @details This is non set by default.  If set, we'll use this value as the timeout on the NSMutableURLRequest we use for fetching tiles.  This lets you extent it where appropriate or shorten it if you like.
@@ -98,7 +98,7 @@
  be MaplyPlateCarree, which covers the whole earth.  Sometimes
  it might even be something unique of your own.
  */
-@property (nonatomic,strong) MaplyCoordinateSystem *coordSys;
+@property (nonatomic,strong,nullable) MaplyCoordinateSystem *coordSys;
 
 /** @brief The cache directory for image tiles.
  @details In general, we want to cache.  The globe, in particular,
@@ -107,7 +107,7 @@
  files to the given directory forever.  If you're interacting
  with a giant image pyramid, that could be problematic.
  */
-@property (nonatomic, strong) NSString *cacheDir;
+@property (nonatomic, strong,nullable) NSString *cacheDir;
 
 /** @brief The maximum age of a cached file in seconds.
       @details If set, tiles in the cache older than this number of
@@ -118,37 +118,43 @@
   */
 @property (nonatomic) int cachedFileLifetime;
 
+/** @brief Query string to add after the URL we're fetching from.
+    @details Add your access tokens and other query arguments.
+  */
+@property (nonatomic,strong,nullable) NSString *queryStr;
+
 /** @brief Add a bounding box tiles are valid within.
  @details By default all areas within the coordinate system are valid for paging tiles.  If you call this, then only the bounding boxes you've added are valid.  You can call this method multiple times.
  @param bbox Bounding box for valid tiles in the local coordinate system.
  */
-- (void)addBoundingBox:(MaplyBoundingBox *)bbox;
+- (void)addBoundingBox:(MaplyBoundingBox *__nonnull)bbox;
 
 /** @brief Add a bounding box tiles are valid within in geo coordinates.
  @details By default all areas within the coordinate system are valid for paging tiles.  If you call this, then only the bounding boxes you've added are valid.  You can call this method multiple times.
  @param bbox Bounding box for valid tiles in geo coordinates (radians).
  */
-- (void)addGeoBoundingBox:(MaplyBoundingBox *)bbox;
+- (void)addGeoBoundingBox:(MaplyBoundingBox *__nonnull)bbox;
 
 /** @brief Generate the request for a given tile.
  @details If someone outside of this request wants to fetch the data directly, they can do so by using this NSURLRequest.
  @param tileID The tile we'd like the NSURLRequest for.
  @return An NSURLRequest object you can use to fetch data for the tile.
  */
-- (NSURLRequest *)requestForTile:(MaplyTileID)tileID;
+- (nullable NSURLRequest *)requestForTile:(MaplyTileID)tileID;
 
 /** @brief The full path for a cached tile.
  @details This returns the full path to where a tile is or where a tile would be if it were cached.
  @details We don't check if the tile is there or not.
  @param tileID The tile we need the filename for.
  */
-- (NSString *)fileNameForTile:(MaplyTileID)tileID;
+- (nullable NSString *)fileNameForTile:(MaplyTileID)tileID;
 
 /** @brief Check if a given tile is stored in the local cache.
     @details This checks if the given tile ID is represented in the local cache directory.
     @param tileID The tile we'd like to check for.
+    @param frame If you're loading individual frames this will be the frame.  Otherwise, -1.
   */
-- (bool)tileIsLocal:(MaplyTileID)tileID;
+- (bool)tileIsLocal:(MaplyTileID)tileID frame:(int)frame;
 
 /** @brief Check if we should even try to load a given tile.
  @details Check whether tile level is within zoom limits for the source, and if the tile is within any MBRs that have been added.
@@ -156,32 +162,55 @@
  @param bbox The bounding box of the tile we're asking about, for convenience.
  @return True if the tile is loadable, false if not.
  */
-- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox *)bbox;
+- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox)bbox;
 
 @end
 
 @class MaplyRemoteTileSource;
 
-/** The remote tile source delegate provides feedback on which
+/** @brief A delegate called during various parts of the tile loading and display operation.
+    @details The remote tile source delegate provides feedback on which
     tiles loaded and which didn't.  You'll be called in all sorts of
     random threads here, so act accordingly.
+    @details This delegate interface can also be used to modify data as it comes in.
   */
 @protocol MaplyRemoteTileSourceDelegate <NSObject>
 
 @optional
 
-/** The tile successfully loaded.
+/** @brief The tile successfully loaded.
     @param tileSource the remote tile source that loaded the tile.
     @param tileID The ID of the tile we loaded.
   */
-- (void) remoteTileSource:(id)tileSource tileDidLoad:(MaplyTileID)tileID;
+- (void) remoteTileSource:(id __nonnull)tileSource tileDidLoad:(MaplyTileID)tileID;
 
-/** The tile failed to load.
+/** @brief Modify the tile data after it's been read.
+    @details This method is useful for messing with tile sources that may not be images, but can be turned into images.
+  */
+- (nonnull NSData *) remoteTileSource:(id __nonnull)tileSource modifyTileReturn:(NSData *__nonnull)tileData forTile:(MaplyTileID)tileID;
+
+/** @brief The tile failed to load.
     @param tileSource The remote tile source that tried to load the tile.
     @param tileID The tile ID of the tile that failed to load.
     @param error The NSError message, probably from the network routine.
   */
-- (void) remoteTileSource:(id)tileSource tileDidNotLoad:(MaplyTileID)tileID error:(NSError *)error;
+- (void) remoteTileSource:(id __nonnull)tileSource tileDidNotLoad:(MaplyTileID)tileID error:(NSError *__nonnull)error;
+
+/** @brief Called when the tile is disabled.
+ */
+- (void)remoteTileSource:(id __nonnull)tileSource tileDisabled:(MaplyTileID)tileID;
+
+/** @brief Called when the tile is enabled.
+ */
+- (void)remoteTileSource:(id __nonnull)tileSource tileEnabled:(MaplyTileID)tileID;
+
+/** @brief Called when the tile is unloaded.
+    @details Normally you won't get called when an image or vector tile is unloaded from memory.  If you set this, you will.
+    @details You're not required to do anything, but you can clean up data of your own if you like.
+    @details You will be called on another thread, so act accordingly.
+    @param tileID The tile that that just got unloaded.
+ */
+- (void)remoteTileSource:(id __nonnull)tileSource tileUnloaded:(MaplyTileID)tileID;
 
 @end
 
@@ -203,7 +232,7 @@
     @param maxZoom The maximum zoom level to fetch.
     @return The MaplyRemoteTileSource object or nil on failure.
   */
-- (id)initWithBaseURL:(NSString *)baseURL ext:(NSString *)ext minZoom:(int)minZoom maxZoom:(int)maxZoom;
+- (nullable instancetype)initWithBaseURL:(NSString *__nonnull)baseURL ext:(NSString *__nullable)ext minZoom:(int)minZoom maxZoom:(int)maxZoom;
 
 /** @brief Initialize from a remote tile spec.
     @details This version of the initializer takes an NSDictionary parsed
@@ -215,7 +244,7 @@
     be trusted.
     @param jsonSpec An NSDictionary parsed from the JSON tile spec.
   */
-- (id)initWithTilespec:(NSDictionary *)jsonSpec;
+- (nullable instancetype)initWithTilespec:(NSDictionary *__nonnull)jsonSpec;
 
 /** @brief Read the image, but only if it's in the cache.
     @details MaplyRemoteTileSource uses asynchronous fetching.  This method is inherently
@@ -223,7 +252,7 @@
     only works if the tile is in the cache.  Be sure to check on that first.
     @param tileID The tile (that should be in the cache) you want to read.
   */
-- (id)imageForTile:(MaplyTileID)tileID;
+- (nullable id)imageForTile:(MaplyTileID)tileID;
 
 /** @brief Initialize with remote tile info.
     @details The MaplyRemoteTileInfo object stores all the specifics about remote tile data.
@@ -231,21 +260,27 @@
     in and then call this initializaer.
     @param info The MaplyRemoteTileInfo describing where to fetch the tiles.
   */
-- (id)initWithInfo:(MaplyRemoteTileInfo *)info;
+- (nullable instancetype)initWithInfo:(MaplyRemoteTileInfo *__nonnull)info;
 
 /** @brief Description of where we fetch the tiles from and where to cache them.
   */
-@property (nonatomic,readonly) MaplyRemoteTileInfo *tileInfo;
+@property (nonatomic,readonly,nonnull) MaplyRemoteTileInfo *tileInfo;
 
 /** @brief A delegate for tile loads and failures.
     @details If set, you'll get callbacks when the various tiles load (or don't). You get called in all sorts of threads.  Act accordingly.
   */
-@property (nonatomic,weak) NSObject<MaplyRemoteTileSourceDelegate> *delegate;
+@property (nonatomic,weak,nullable) NSObject<MaplyRemoteTileSourceDelegate> *delegate;
 
 /// @brief Passes through the coord system from the MaplyRemoteTileInfo
-@property (nonatomic,strong) MaplyCoordinateSystem *coordSys;
+@property (nonatomic,strong,nonnull) MaplyCoordinateSystem *coordSys;
 
 /// @brief Passes through the cacheDir from the MaplyRemoteTileInfo
-@property (nonatomic,strong) NSString *cacheDir;
+@property (nonatomic,strong,nullable) NSString *cacheDir;
+
+/// @brief If set, we'll track the outstanding connections across all remote tile sources
++ (void)setTrackConnections:(bool)track;
+
+/// @brief Number of outstanding connections across all remote tile sources
++ (int)numOutstandingConnections;
 
 @end

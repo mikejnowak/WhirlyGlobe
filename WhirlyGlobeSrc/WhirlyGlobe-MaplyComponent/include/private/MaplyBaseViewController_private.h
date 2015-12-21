@@ -3,7 +3,7 @@
  *  MaplyComponent
  *
  *  Created by Steve Gifford on 12/14/12.
- *  Copyright 2012 mousebird consulting
+ *  Copyright 2012-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -30,7 +30,10 @@
 #import "MaplyVectorObject_private.h"
 #import "MaplyShader_private.h"
 #import "MaplyActiveObject_private.h"
+#import "MaplyCoordinateSystem_private.h"
+#import "MaplyCluster.h"
 #import "SMCalloutView.h"
+#import "Maply3dTouchPreviewDelegate.h"
 
 @interface MaplyBaseViewController() <SMCalloutViewDelegate>
 {
@@ -40,6 +43,7 @@
     
     WhirlyKitLayerThread *baseLayerThread;
     WhirlyKitLayoutLayer *layoutLayer;
+    WhirlyKitParticleSystemLayer *partSysLayer;
     NSMutableArray *layerThreads;
 
     // Our own interaction layer does most of the work
@@ -75,6 +79,9 @@
     /// Active models
     NSMutableArray *activeObjects;
     
+    /// The default cluster generator (group 0)
+    MaplyBasicClusterGenerator *defaultClusterGenerator;
+    
     /// Current draw priority if we're assigning them ourselves
     int layerDrawPriority;
     
@@ -86,6 +93,12 @@
     
     /// When an annotation comes up we may want to reposition the view.  This works poorly in some cases.
     bool allowRepositionForAnnnotations;
+  
+    /// 3dtouch preview context, so we can remove it.
+    id <UIViewControllerPreviewing> previewingContext;
+  
+    /// Need to keep a ref to this because the system keeps a weak ref
+    Maply3dTouchPreviewDelegate *previewTouchDelegate;
 }
 
 /// This is called by the subclasses.  Don't call it yourself.

@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 5/20/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -50,11 +50,21 @@
     @param tileID The tile the system wants you to start loading.
     @param layer The quad paging layer you'll hand the data over to when it's loaded.
   */
-- (void)startFetchForTile:(MaplyTileID)tileID forLayer:(MaplyQuadPagingLayer *)layer;
+- (void)startFetchForTile:(MaplyTileID)tileID forLayer:(MaplyQuadPagingLayer *__nonnull)layer;
+
+@optional
+
+/** @brief An optional callback when a tile is unloaded.
+    @details If filled in, you'll be called when a tile is unloaded.
+  */
+- (void)tileDidUnload:(MaplyTileID)tileID;
 
 @end
 
-typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
+typedef NS_ENUM(NSInteger, MaplyQuadPagingDataStyle) {
+	MaplyDataStyleAdd,
+	MaplyDataStyleReplace,
+};
 
 /** @brief The Quad Paging Layer is for loading things like vector tile sets.
     @details The Maply Quad Paging Layer implements a general purpose paging interface for quad tree based data sources.  This is different from the MaplyQuadImageTilesLayer in that it's meant for paging things like vector tiles, or really any other features that are not images.
@@ -86,7 +96,7 @@ typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
 /** @brief The view controller this paging layer is associated with.
     @details This view controller is the one you should create visual objects in.
   */
-@property (nonatomic,weak,readonly) MaplyBaseViewController *viewC;
+@property (nonatomic,weak,readonly,nullable) MaplyBaseViewController *viewC;
 
 /** @brief Initialize with coordinate system and delegate for paging.
     @details This initializer takes the coordinate system we're working in and the MaplyPagingDelegate object.  Fill out that to do the real work.
@@ -94,7 +104,7 @@ typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
     @param tileSource The tile source that will fetch data and create visible objects.
     @return Returns a MaplyViewControllerLayer that can be added to the MaplyBaseViewController.
   */
-- (id)initWithCoordSystem:(MaplyCoordinateSystem *)coordSys delegate:(NSObject<MaplyPagingDelegate> *)tileSource;
+- (nullable instancetype)initWithCoordSystem:(MaplyCoordinateSystem *__nonnull)coordSys delegate:(NSObject<MaplyPagingDelegate> *__nonnull)tileSource;
 
 /** @brief Use the target zoom level shortcut when possible.
     @details This turns on the target zoom level shortcut as described in targetZoomLevel.  When on we'll calculate tile importance that way, that is based on a target zoom level rather than the more complex screen space calculations.
@@ -115,13 +125,19 @@ typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
  */
 - (int)targetZoomLevel;
 
+/** @brief This controls how the importance of tiles is calculated.  Either individually (false) or with the parent (true),
+    @details This is a low level laoding control parameter.  Don't change unless you know why.
+    @details By default this is true.
+ */
+@property (nonatomic) bool groupChildrenWithParent;
+
 /** @brief You call this from your MaplyPagingDelegate with an array of data you've created for a tile.
     @details This method is called by your MaplyPagingDelegate to add MaplyComponentObject's to the data for a given tile.  Please create them disabled by putting @"enable": @(NO) in the description dictionary.  The paging layer will then be responsible for cleaning them up when needed as well as turning them on and off as the user moves around.
     @details The call is thread safe.
     @param dataObjects An NSArray of MaplyComponentObject objects.
     @param tileID The tile ID for the data we're handing over.
   */
-- (void)addData:(NSArray *)dataObjects forTile:(MaplyTileID)tileID;
+- (void)addData:(NSArray *__nonnull)dataObjects forTile:(MaplyTileID)tileID;
 
 /** @brief You call this from your MaplyPagingDelegate with an array of data you've created for a tile.
     @details This method is called by your MaplyPagingDelegate to add MaplyComponentObject's to the data for a given tile.  Please create them disabled by putting @"enable": @(NO) in the description dictionary.  The paging layer will then be responsible for cleaning them up when needed as well as turning them on and off as the user moves around.
@@ -130,7 +146,7 @@ typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
     @param tileID The tile ID for the data we're handing over.
     @param style If set to MaplyDataStyleReplace the data at this level will replace data at lower levels.  This is the default.  If set to MaplyDataStyleAdd then the data at this level adds to data above and below this level.
  */
-- (void)addData:(NSArray *)dataObjects forTile:(MaplyTileID)tileID style:(MaplyQuadPagingDataStyle)dataStyle;
+- (void)addData:(NSArray *__nonnull)dataObjects forTile:(MaplyTileID)tileID style:(MaplyQuadPagingDataStyle)dataStyle;
 
 /** @brief Called from your MaplyPagingDelegate when a tile fails to load.
     @details If you fail to load your tile data in your MaplyPagingDelegate, you need to let the paging layer know with this call.  Otherwise the paging layer assumes the tile is still loading.
@@ -153,12 +169,42 @@ typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
 - (void)tileDidLoad:(MaplyTileID)tileID part:(int)whichPart;
 
 /** @brief Calculate the bounding box for a single tile in geographic.
-    @details This is a utility method for calculating the extents of a given tile in the local coordinate system (e.g. the one paging layer is using).
+    @details This is a utility method for calculating the extents of a given tile in geographic (e.g. lon/lat).
     @param tileID The ID for the tile we're interested in.
-    @param ll The lower left corner of the tile in geographic coordinates.
-    @param ur The upper right corner of the tile in geographic coordinates.
+    @return The lower left and upper right corner of the tile in geographic coordinates. Returns kMaplyNullBoundingBox in case of error
   */
-- (void)geoBoundsforTile:(MaplyTileID)tileID ll:(MaplyCoordinate *)ll ur:(MaplyCoordinate *)ur;
+- (MaplyBoundingBox)geoBoundsForTile:(MaplyTileID)tileID;
+
+/** @brief Calculate the bounding box for a single tile in geographic.
+ @details This is a utility method for calculating the extents of a given tile in geographic (e.g. lon/lat).
+ @param tileID The ID for the tile we're interested in.
+ @param ll The lower left corner of the tile in geographic coordinates.
+ @param ur The upper right corner of the tile in geographic coordinates.
+ */
+- (void)geoBoundsforTile:(MaplyTileID)tileID ll:(MaplyCoordinate *__nonnull)ll ur:(MaplyCoordinate *__nonnull)ur;
+
+
+/** @brief Calculate the bounding box for a single tile in geographic using doubles.
+ @details This is a utility method for calculating the extents of a given tile in geographic (e.g. lon/lat).
+ @param tileID The ID for the tile we're interested in.
+ @return The lower left and upper right corner of the tile in geographic coordinates. Returns kMaplyNullBoundingBoxD in case of error
+ */
+- (MaplyBoundingBoxD)geoBoundsForTileD:(MaplyTileID)tileID;
+
+/** @brief Calculate the bounding box for a single tile in geographic using doubles.
+ @details This is a utility method for calculating the extents of a given tile in geographic (e.g. lon/lat).
+ @param tileID The ID for the tile we're interested in.
+ @param ll The lower left corner of the tile in geographic coordinates.
+ @param ur The upper right corner of the tile in geographic coordinates.
+ */
+- (void)geoBoundsForTileD:(MaplyTileID)tileID ll:(MaplyCoordinateD *__nonnull)ll ur:(MaplyCoordinateD *__nonnull)ur;
+
+/** @brief Calculate the bounding box for a single tile in the local coordinate system.
+ @details This utility method calculates the bounding box for a tile in the coordinate system used for the layer.
+ @param tileID The ID for the tile we're interested in.
+ @return The lower left and upper right corner of the tile in geographic coordinates.
+ */
+- (MaplyBoundingBox)boundsForTile:(MaplyTileID)tileID;
 
 /** @brief Calculate the bounding box for a single tile in the local coordinate system.
     @details This utility method calculates the bounding box for a tile in the coordinate system used for the layer.
@@ -166,7 +212,29 @@ typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
     @param ll The lower left corner of the tile in local coordinates.
     @param ur The upper right corner of the tile in local coordinates.
   */
-- (void)boundsforTile:(MaplyTileID)tileID ll:(MaplyCoordinate *)ll ur:(MaplyCoordinate *)ur;
+- (void)boundsforTile:(MaplyTileID)tileID ll:(MaplyCoordinate *__nonnull)ll ur:(MaplyCoordinate *__nonnull)ur;
+
+/** @brief Return the center of the tile in display coordinates.
+    @param tileID The ID for the tile we're interested in.
+    @return Return the center in display space for the given tile.
+  */
+- (MaplyCoordinate3d)displayCenterForTile:(MaplyTileID)tileID;
+
+/** @brief Maximum number of tiles to load in at once.
+ @details This is the maximum number of tiles the pager will have loaded into memory at once.  The default is 256 and that's generally good enough.  However, if your tile size is small, you may want to load in more.
+ @details Tile loading can get out of control when using elevation data.  The toolkit calculates potential sceen coverage for each tile so elevation data makes all tiles more important.  As a result the system will happily page in way more data than you may want.  The limit becomes important in elevation mode, so leave it at 128 unless you need to change it.
+ */
+@property (nonatomic) int maxTiles;
+
+/** @brief Set the minimum tile height (0.0 by default).
+    @details When paging tiles containing 3D geometry it's helpful to know the min and max height.  This is the minimum height and defaults to 0.0.
+  */
+@property (nonatomic) float minTileHeight;
+
+/** @brief Set the maximum tile height (0.0 off by default)
+    @details When paging tiles containing 3D geometry it's helpful to know the min and max height.  This is the maximum height and it defaults to 0.0.  When min and max are the same, they are ignored.
+  */
+@property (nonatomic) float maxTileHeight;
 
 /** @brief Reload the paging layer contents.
     @details This asks the paging layer to clean out its current data and reload everything from scratch.
@@ -174,6 +242,6 @@ typedef enum {MaplyDataStyleAdd,MaplyDataStyleReplace} MaplyQuadPagingDataStyle;
 - (void)reload;
 
 
-- (NSObject<MaplyPagingDelegate>*)pagingDelegate;
+- (nullable NSObject<MaplyPagingDelegate> *)pagingDelegate;
 
 @end

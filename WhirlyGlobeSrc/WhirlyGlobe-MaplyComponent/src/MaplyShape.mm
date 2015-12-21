@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/28/12.
- *  Copyright 2012 mousebird consulting
+ *  Copyright 2012-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,28 +20,90 @@
 
 #import "MaplyShape.h"
 #import "WhirlyGlobe.h"
+#import "MaplySharedAttributes.h"
+#import "MaplyMatrix_private.h"
 
 using namespace WhirlyKit;
 
 @implementation MaplyShape
 
+- (WhirlyKitShape *)asWKShape:(NSDictionary *)desc
+{
+    return nil;
+}
+
 @end
 
 @implementation MaplyShapeCircle
+
+- (WhirlyKitCircle *)asWKShape:(NSDictionary *)desc
+{
+    WhirlyKitCircle *newCircle = [[WhirlyKitCircle alloc] init];\
+    
+    newCircle.loc.lon() = _center.x;
+    newCircle.loc.lat() = _center.y;
+    newCircle.radius = _radius;
+    newCircle.height = _height;
+    if (self.color)
+    {
+        newCircle.useColor = true;
+        RGBAColor color = [self.color asRGBAColor];
+        newCircle.color = color;
+    }
+    
+    return newCircle;
+}
 
 @end
 
 @implementation MaplyShapeSphere
 
+- (WhirlyKitSphere *)asWKShape:(NSDictionary *)desc
+{
+    WhirlyKitSphere *newSphere = [[WhirlyKitSphere alloc] init];
+    newSphere.loc.lon() = _center.x;
+    newSphere.loc.lat() = _center.y;
+    newSphere.radius = _radius;
+    newSphere.height = _height;
+    newSphere.sampleX = [desc[kMaplyShapeSampleX] intValue];
+    newSphere.sampleY = [desc[kMaplyShapeSampleY] intValue];
+    if (self.color)
+    {
+        newSphere.useColor = true;
+        RGBAColor color = [self.color asRGBAColor];
+        newSphere.color = color;
+    }
+    
+    return newSphere;
+}
+
 @end
 
 @implementation MaplyShapeCylinder
+
+- (WhirlyKitCylinder *)asWKShape:(NSDictionary *)desc
+{
+    WhirlyKitCylinder *newCyl = [[WhirlyKitCylinder alloc] init];
+    newCyl.loc.lon() = _baseCenter.x;
+    newCyl.loc.lat() = _baseCenter.y;
+    newCyl.baseHeight = _baseHeight;
+    newCyl.radius = _radius;
+    newCyl.height = _height;
+    if (self.color)
+    {
+        newCyl.useColor = true;
+        RGBAColor color = [self.color asRGBAColor];
+        newCyl.color = color;
+    }
+    
+    return newCyl;
+}
 
 @end
 
 @implementation MaplyShapeGreatCircle
 
-- (id)init
+- (instancetype)init
 {
     self = [super init];
     if (!self)
@@ -76,7 +138,7 @@ using namespace WhirlyKit;
     MaplyCoordinate3d *coords;    
 }
 
-- (id)initWithCoords:(MaplyCoordinate3d *)inCoords numCoords:(int)inNumCoords
+- (instancetype)initWithCoords:(MaplyCoordinate3d *)inCoords numCoords:(int)inNumCoords
 {
     self = [super init];
     if (!self)
@@ -104,3 +166,76 @@ using namespace WhirlyKit;
 }
 
 @end
+
+@implementation MaplyShapeExtruded
+{
+    int numCoords;
+    NSData *coords;
+}
+
+- (instancetype)initWithOutline:(NSArray *)inCoords
+{
+	double* doubleCoords = (double *)malloc(sizeof(double)*[inCoords count]*2);
+
+	for (int i = 0; i < [inCoords count]; ++i) {
+		doubleCoords[i] = [inCoords[i] doubleValue];
+	}
+
+	self = [self initWithOutline:doubleCoords numCoordPairs:[inCoords count]];
+
+	free(doubleCoords);
+
+	return self;
+}
+
+- (instancetype)initWithOutline:(double *)inCoords numCoordPairs:(int)numCoordPairs
+{
+    self = [super init];
+    
+    numCoords = numCoordPairs;
+    coords = [NSData dataWithBytes:inCoords length:sizeof(double)*numCoordPairs*2];
+    _scale = 1/WhirlyKit::EarthRadius;
+    
+    return self;
+}
+
+- (int)numCoordPairs
+{
+    return numCoords;
+}
+
+- (double *)coordData
+{
+    return (double *)[coords bytes];
+}
+
+- (WhirlyKitShapeExtruded *)asWKShape:(NSDictionary *)desc
+{
+    WhirlyKitShapeExtruded *newEx = [[WhirlyKitShapeExtruded alloc] init];
+    Point3d loc(self.center.x,self.center.y,self.height*self.scale);
+    newEx.loc = loc;
+    newEx.thickness = self.thickness*self.scale;
+    if (self.transform)
+        newEx.transform = self.transform.mat;
+    int theNumCoords = self.numCoordPairs;
+    double *theCoords = self.coordData;
+    std::vector<Point2d> pts;
+    pts.resize(theNumCoords);
+    for (unsigned int ii=0;ii<theNumCoords;ii++)
+    {
+        Point2d pt(theCoords[2*ii]*self.scale,theCoords[2*ii+1]*self.scale);
+        pts[ii] = pt;
+    }
+    newEx.pts = pts;
+    if (self.color)
+    {
+        newEx.useColor = true;
+        RGBAColor color = [self.color asRGBAColor];
+        newEx.color = color;
+    }
+    
+    return newEx;
+}
+
+@end
+

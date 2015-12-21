@@ -3,7 +3,7 @@
  *  WhirlyGlobeComponent
  *
  *  Created by Steve Gifford on 7/26/12.
- *  Copyright 2012 mousebird consulting
+ *  Copyright 2012-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 /** @brief The UIView we want moved around.
     @details This is the UIView we'll tie to the geographic location.  If you want to center it, use offsets within the UIView.
   */
-@property (nonatomic,strong) UIView *view;
+@property (nonatomic,strong) UIView *__nullable view;
 
 /** @brief The geographic location where we want to place the UIView.
     @details This is the location (lon/lat in radians) where we want to stick the UIView.  The location on screen will be updated as the user manipulates the map or globe.

@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/4/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@
      part of the name.  I'll tack on the sqlite extension.
     @return Returns a new MaplyMBTileSource object on success, nil on failure.
   */
-- (id)initWithMBTiles:(NSString *)fileName;
+- (nullable instancetype)initWithMBTiles:(NSString *__nonnull)fileName;
 
 /** @brief The maximum zoom level in the MBTiles archive.
     @details This is initially the max zoom level read out
@@ -64,6 +64,6 @@
      is always web mercator with the web extents.  This is
      known as web mercator and it makes cartographers cry.
   */
-@property (nonatomic,readonly) MaplyCoordinateSystem *coordSys;
+@property (nonatomic,readonly,nonnull) MaplyCoordinateSystem *coordSys;
 
 @end

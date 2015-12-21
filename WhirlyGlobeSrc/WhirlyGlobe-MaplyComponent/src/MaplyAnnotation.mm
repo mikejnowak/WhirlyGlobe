@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 12/13/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 
 @implementation MaplyAnnotation
 
-- (id)init
+- (instancetype)init
 {
     self = [super init];
     _calloutView = [[SMCalloutView alloc] init];
@@ -102,6 +102,11 @@
 - (UIView *)contentView
 {
     return _calloutView.contentView;
+}
+
+- (void)setLoc:(MaplyCoordinate)newLoc
+{
+    _loc = newLoc;
 }
 
 @end

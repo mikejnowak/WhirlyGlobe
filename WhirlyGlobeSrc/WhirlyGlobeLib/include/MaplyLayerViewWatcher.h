@@ -3,7 +3,7 @@
  *  WhirlyGlobeLib
  *
  *  Created by Steve Gifford on 9/14/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,6 +29,15 @@
 
 /// Initialize with the maply view and renderer
 - (id)initWithView:(MaplyView *)mapView renderer:(WhirlyKitSceneRendererES *)renderer;
+
+/// Height above globe at this view state
+@property (nonatomic,assign) double heightAboveSurface;
+
+/** Given a location on the screen and the screen size, figure out where we touched the plane
+ Returns true if we hit and where
+ Returns false if not and the closest point on the plane
+ */
+- (bool)pointOnPlaneFromScreen:(CGPoint)pt transform:(const Eigen::Matrix4d *)transform frameSize:(const WhirlyKit::Point2f &)frameSize hit:(WhirlyKit::Point3d *)hit clip:(bool)clip;
 
 @end
 

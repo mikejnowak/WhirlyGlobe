@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/18/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@
 @interface MaplyComponentObject : NSObject
 
 /// @brief Construct with a description.  Uses the kMaplyEnable.
-- (id)initWithDesc:(NSDictionary *)desc;
+- (nonnull instancetype)initWithDesc:(NSDictionary *__nonnull)desc;
 
 @end
 

@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 1/24/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -29,6 +29,6 @@
     @details This initializer wants the name of a texture group file as created by the ImageChopper program.  That's a plist and a group of images to go with it.
     @details Seriously, go use MaplyQuadImageTilesLayer instead.
   */
-- (id)initWithWithTexGroup:(NSString *)texGroupName;
+- (nonnull instancetype)initWithWithTexGroup:(NSString *__nonnull)texGroupName;
 
 @end

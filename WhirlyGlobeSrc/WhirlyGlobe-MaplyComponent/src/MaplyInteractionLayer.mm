@@ -3,7 +3,7 @@
  *  WhirlyGlobeComponent
  *
  *  Created by Steve Gifford on 7/21/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ using namespace WhirlyGlobe;
     MaplyView *mapView;
 }
 
-- (id)initWithMapView:(MaplyView *)inMapView
+- (instancetype)initWithMapView:(MaplyView *)inMapView
 {
     self = [super initWithView:inMapView];
     if (!self)
@@ -73,20 +73,13 @@ using namespace WhirlyGlobe;
 - (void) userDidTapLayerThread:(MaplyTapMessage *)msg
 {
     // First, we'll look for labels and markers
-    SimpleIdentity selID = ((SelectionManager *)scene->getManager(kWKSelectionManager))->pickObject(Point2f(msg.touchLoc.x,msg.touchLoc.y),10.0,mapView);
-
-    NSObject *selObj;
-    if (selID != EmptyIdentity)
-    {       
-        // Found something.  Now find the associated object
-        SelectObjectSet::iterator it = selectObjectSet.find(SelectObject(selID));
-        if (it != selectObjectSet.end())
-        {
-            selObj = it->obj;
-        }
-    } else {
+    NSObject *selObj = [self selectLabelsAndMarkerForScreenPoint:msg.touchLoc];
+    if(!selObj) {
         // Next, try the vectors
-        selObj = [self findVectorInPoint:Point2f(msg.whereGeo.x(),msg.whereGeo.y()) inView:(MaplyBaseViewController*)self.viewController];
+        // Note: Ignoring everything but the first return
+        NSArray *vecObjs = [self findVectorsInPoint:Point2f(msg.whereGeo.x(),msg.whereGeo.y()) inView:(MaplyBaseViewController*)self.viewController multi:false];
+        if ([vecObjs count] > 0)
+            selObj = [vecObjs objectAtIndex:0];
     }
     
     // Tell the view controller about it
@@ -96,6 +89,24 @@ using namespace WhirlyGlobe;
                    }
                    );
 }
+
+- (NSObject*)selectLabelsAndMarkerForScreenPoint:(CGPoint)screenPoint
+{
+    SimpleIdentity selID = ((SelectionManager *)scene->getManager(kWKSelectionManager))->pickObject(Point2f(screenPoint.x, screenPoint.y),10.0,mapView);
+    
+    NSObject *selObj;
+    if (selID != EmptyIdentity)
+    {
+        // Found something.  Now find the associated object
+        SelectObjectSet::iterator it = selectObjectSet.find(SelectObject(selID));
+        if (it != selectObjectSet.end())
+        {
+            selObj = it->obj;
+        }
+    }
+    return selObj;
+}
+
 
 // Check for a selection
 - (void) userDidTap:(MaplyTapMessage *)msg

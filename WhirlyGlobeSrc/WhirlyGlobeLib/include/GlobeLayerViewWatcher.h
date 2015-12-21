@@ -3,7 +3,7 @@
  *  WhirlyGlobeLib
  *
  *  Created by Steve Gifford on 4/17/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,14 +27,14 @@
   */
 @interface WhirlyGlobeViewState : WhirlyKitViewState
 
+/// Initialize from the globe view and the renderer
+- (id)initWithView:(WhirlyGlobeView *)globeView renderer:(WhirlyKitSceneRendererES *)renderer;
+
 /// Rotation, etc, at this view state
 @property (nonatomic,assign) Eigen::Quaterniond &rotQuat;
 
 /// Height above globe at this view state
 @property (nonatomic,assign) double heightAboveGlobe;
-
-/// Initialize from the globe view and the renderer
-- (id)initWithView:(WhirlyGlobeView *)globeView renderer:(WhirlyKitSceneRendererES *)renderer;
 
 /// Return where up (0,0,1) is after model rotation
 - (Eigen::Vector3d)currentUp;

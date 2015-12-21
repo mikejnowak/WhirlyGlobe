@@ -3,7 +3,7 @@
  *  WhirlyGlobeComponent
  *
  *  Created by Steve Gifford on 7/24/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 
 @implementation MaplyScreenLabel
 
-- (id)init
+- (instancetype)init
 {
     self = [super init];
     if (!self)
@@ -36,5 +36,9 @@
     return self;
 }
 
+
+@end
+
+@implementation MaplyMovingScreenLabel
 
 @end

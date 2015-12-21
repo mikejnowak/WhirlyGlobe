@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 5/30/14.
- *  Copyright 2011-2014 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
     std::vector<int> elements;
 }
 
-- (id)initWithSize:(CGSize)inSize
+- (instancetype)initWithSize:(CGSize)inSize
 {
     self = [super init];
     if (!self)

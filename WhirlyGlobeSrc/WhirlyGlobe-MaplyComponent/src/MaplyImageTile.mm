@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 5/7/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 
 #import "MaplyImageTile.h"
 #import "MaplyImageTile_private.h"
+#import "WhirlyGlobe.h"
 
 @implementation MaplyImageTile
 {
@@ -29,7 +30,7 @@
     NSArray *stuff;
 }
 
-- (id)initAsPlaceholder
+- (instancetype)initAsPlaceholder
 {
     self = [super init];
     _type = MaplyImgTypePlaceholder;
@@ -37,7 +38,7 @@
     return self;
 }
 
-- (id)initWithRawImage:(NSData *)data width:(int)width height:(int)height
+- (instancetype)initWithRawImage:(NSData *)data width:(int)width height:(int)height
 {
     if (![data isKindOfClass:[NSData class]])
         return nil;
@@ -54,7 +55,7 @@
     return self;
 }
 
-- (id)initWithRawImageArray:(NSArray *)dataArray width:(int)width height:(int)height
+- (instancetype)initWithRawImageArray:(NSArray *)dataArray width:(int)width height:(int)height
 {
     for (NSData *data in dataArray)
     {
@@ -73,7 +74,7 @@
     return self;
 }
 
-- (id)initWithImage:(UIImage *)image
+- (instancetype)initWithImage:(UIImage *)image
 {
     if (![image isKindOfClass:[UIImage class]])
         return nil;
@@ -86,7 +87,7 @@
     return self;
 }
 
-- (id)initWithImageArray:(NSArray *)images
+- (instancetype)initWithImageArray:(NSArray *)images
 {
     for (UIImage *image in images)
         if (![image isKindOfClass:[UIImage class]])
@@ -100,7 +101,7 @@
     return self;
 }
 
-- (id)initWithPNGorJPEGData:(NSData *)data
+- (instancetype)initWithPNGorJPEGData:(NSData *)data
 {
     if (![data isKindOfClass:[NSData class]])
         return nil;
@@ -113,7 +114,7 @@
     return self;
 }
 
-- (id)initWithPNGorJPEGDataArray:(NSArray *)dataArray
+- (instancetype)initWithPNGorJPEGDataArray:(NSArray *)dataArray
 {
     for (NSData *data in dataArray)
     {
@@ -140,7 +141,7 @@
     return CGSizeMake(_targetWidth, _targetHeight);
 }
 
-- (id)initWithRandomData:(id)theObj
+- (instancetype)initWithRandomData:(id)theObj
 {
     self = nil;
     
@@ -211,6 +212,15 @@
         {
             loadImage.width = _targetWidth;
             loadImage.height = _targetHeight;
+        } else {
+            // They have to at least be square
+            if (loadImage.width != loadImage.height)
+            {
+                int maxSize = std::max(loadImage.width,loadImage.height);
+                maxSize = WhirlyKit::NextPowOf2(maxSize);
+                loadImage.width = maxSize;
+                loadImage.height = maxSize;
+            }
         }
 
         // This pulls the pixels out of their weird little compressed formats

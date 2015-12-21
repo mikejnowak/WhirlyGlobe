@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/4/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,12 +28,18 @@
 @interface MaplyAnimationTestTileSource : NSObject<MaplyTileSource>
 
 /// Initialize with the coordinate system, min and max zoom levels, and the number of images to return
-- (id)initWithCoordSys:(MaplyCoordinateSystem *)coordSys minZoom:(int)minZoom maxZoom:(int)maxZoom depth:(int)depth;
+- (nonnull instancetype)initWithCoordSys:(MaplyCoordinateSystem *__nonnull)coordSys minZoom:(int)minZoom maxZoom:(int)maxZoom depth:(int)depth;
 
 /// Coordinate system we're pretending to be in
-@property (nonatomic,readonly) MaplyCoordinateSystem *coordSys;
+@property (nonatomic,readonly, nonnull) MaplyCoordinateSystem *coordSys;
 
 /// How big the images we generate are
 @property (nonatomic) int pixelsPerSide;
+
+/// If set, we'll throw in a random delay
+@property (nonatomic) bool useDelay;
+
+/// If set, we'll keep it mostly transparent for testing edges
+@property (nonatomic) bool transparentMode;
 
 @end

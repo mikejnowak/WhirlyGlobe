@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/4/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ using namespace WhirlyKit;
     sqlite3 *_sqlDb;
 }
 
-- (id)initWithMBTiles:(NSString *)mbTilesName
+- (instancetype)initWithMBTiles:(NSString *)mbTilesName
 {
     self = [super init];
     if (!self)
@@ -57,7 +57,11 @@ using namespace WhirlyKit;
             // Now try looking for it in the bundle
             infoPath = [[NSBundle mainBundle] pathForResource:mbTilesName ofType:@"mbtiles"];
             if (!infoPath)
-                return nil;
+            {
+                infoPath = [[NSBundle mainBundle] pathForResource:mbTilesName ofType:@"sqlite"];
+                if (!infoPath)
+                    return nil;
+            }
         }
     }
     
@@ -71,7 +75,6 @@ using namespace WhirlyKit;
     
     // Look at the metadata
     sqlhelpers::StatementRead readStmt(_sqlDb,@"select value from metadata where name='bounds';");
-    // Note: Debugging
     if (readStmt.stepRow())
     {
         NSString *bounds = readStmt.getString();
@@ -133,6 +136,15 @@ using namespace WhirlyKit;
     return self;
 }
 
+- (void)dealloc
+{
+    @synchronized(self)
+    {
+        if (_sqlDb)
+            sqlite3_close(_sqlDb);
+    }
+}
+
 - (int)minZoom
 {
     return _minZoom;
@@ -148,7 +160,7 @@ using namespace WhirlyKit;
     return _pixelsPerTile;
 }
 
-- (bool)tileIsLocal:(MaplyTileID)tileID
+- (bool)tileIsLocal:(MaplyTileID)tileID frame:(int)frame
 {
     return true;
 }
@@ -180,7 +192,7 @@ using namespace WhirlyKit;
 }
 
 
-- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox *)bbox
+- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox)bbox
 {
     @synchronized(self)
     {
@@ -198,6 +210,5 @@ using namespace WhirlyKit;
 
     return NO;
 }
-
 
 @end

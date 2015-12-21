@@ -3,7 +3,7 @@
  *  WhirlyGlobeComponent
  *
  *  Created by Steve Gifford on 7/21/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -119,27 +119,25 @@ using namespace WhirlyGlobe;
     }
     
     // First, we'll look for labels and markers
-    SelectionManager *selectManager = (SelectionManager *)scene->getManager(kWKSelectionManager);
-    SimpleIdentity selID = selectManager->pickObject(Point2f(msg.touchLoc.x,msg.touchLoc.y),10.0,globeView);
-
-    NSObject *selObj;
-    if (selID != EmptyIdentity)
-    {       
-        // Found something.  Now find the associated object
-        SelectObjectSet::iterator it = selectObjectSet.find(SelectObject(selID));
-        if (it != selectObjectSet.end())
-        {
-            selObj = it->obj;
-        }
-    } else {
-        // Next, try the vectors
-        selObj = [self findVectorInPoint:Point2f(msg.whereGeo.x(),msg.whereGeo.y())];
+    NSMutableArray *retSelectArr = [self selectMultipleLabelsAndMarkersForScreenPoint:msg.touchLoc];
+    
+    // Next, try the vectors
+    // Note: This means we'll never get both vectors and other objects
+    NSArray *vecObjs = [self findVectorsInPoint:Point2f(msg.whereGeo.x(),msg.whereGeo.y())];
+    for (MaplyVectorObject *vecObj in vecObjs)
+    {
+        MaplySelectedObject *selObj = [[MaplySelectedObject alloc] init];
+        selObj.selectedObj = vecObj;
+        selObj.screenDist = 0.0;
+        // Note: Not quite right
+        selObj.zDist = 0.0;
+        [retSelectArr addObject:selObj];
     }
     
     // Tell the view controller about it
     dispatch_async(dispatch_get_main_queue(),^
                    {
-                       [_viewController handleSelection:msg didSelect:selObj];
+                       [_viewController handleSelection:msg didSelect:retSelectArr];
                    }
                    );
 }
@@ -150,5 +148,46 @@ using namespace WhirlyGlobe;
     // Pass it off to the layer thread
     [self performSelector:@selector(userDidTapLayerThread:) onThread:layerThread withObject:msg waitUntilDone:NO];
 }
+
+
+
+- (NSObject*)selectLabelsAndMarkerForScreenPoint:(CGPoint)screenPoint {
+    return [[self selectMultipleLabelsAndMarkersForScreenPoint:screenPoint] firstObject];
+}
+
+- (NSMutableArray*)selectMultipleLabelsAndMarkersForScreenPoint:(CGPoint)screenPoint
+{
+    SelectionManager *selectManager = (SelectionManager *)scene->getManager(kWKSelectionManager);
+    std::vector<SelectionManager::SelectedObject> selectedObjs;
+    selectManager->pickObjects(Point2f(screenPoint.x,screenPoint.y),10.0,globeView,selectedObjs);
+    
+    NSMutableArray *retSelectArr = [NSMutableArray array];
+    if (!selectedObjs.empty())
+    {
+        // Work through the objects the manager found, creating entries for each
+        for (unsigned int ii=0;ii<selectedObjs.size();ii++)
+        {
+            SelectionManager::SelectedObject &theSelObj = selectedObjs[ii];
+            MaplySelectedObject *selObj = [[MaplySelectedObject alloc] init];
+            
+            for (auto selectID : theSelObj.selectIDs)
+            {
+                SelectObjectSet::iterator it = selectObjectSet.find(SelectObject(selectID));
+                if (it != selectObjectSet.end())
+                    selObj.selectedObj = it->obj;
+                
+                selObj.screenDist = theSelObj.screenDist;
+                selObj.cluster = theSelObj.isCluster;
+                selObj.zDist = theSelObj.distIn3D;
+                
+                if (selObj.selectedObj)
+                    [retSelectArr addObject:selObj];
+            }
+        }
+    }
+    
+    return retSelectArr;
+}
+
 
 @end

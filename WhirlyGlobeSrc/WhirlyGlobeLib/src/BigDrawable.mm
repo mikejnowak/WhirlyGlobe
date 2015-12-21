@@ -3,7 +3,7 @@
  *  WhirlyGlobeLib
  *
  *  Created by Steve Gifford on 3/6/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@
 #import "SceneRendererES2.h"
 #import "GLUtils.h"
 
+using namespace Eigen;
+
 namespace WhirlyKit
 {
     
@@ -38,7 +40,7 @@ BigDrawable::Buffer::Buffer()
 
 BigDrawable::BigDrawable(const std::string &name,int singleVertexSize,const std::vector<VertexAttribute> &templateAttributes,int singleElementSize,int numVertexBytes,int numElementBytes)
     : Drawable(name), singleVertexSize(singleVertexSize), vertexAttributes(templateAttributes), singleElementSize(singleElementSize), numVertexBytes(numVertexBytes), numElementBytes(numElementBytes), drawPriority(0), requestZBuffer(false),
-    waitingOnSwap(false), programId(0), elementChunkSize(0), minVis(DrawVisibleInvalid), maxVis(DrawVisibleInvalid), minVisibleFadeBand(0.0), maxVisibleFadeBand(0.0), enable(true), center(0,0,0)
+    waitingOnSwap(false), programId(0), elementChunkSize(0), minVis(DrawVisibleInvalid), maxVis(DrawVisibleInvalid), minVisibleFadeBand(0.0), maxVisibleFadeBand(0.0), enable(true), center(0,0,0), fade(1.0)
 {
     activeBuffer = -1;
     
@@ -208,6 +210,7 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
     OpenGLES2Program *prog = frameInfo.program;
     
     // GL Texture IDs
+    bool anyTextures = false;
     std::vector<GLuint> glTexIDs;
     for (unsigned int ii=0;ii<texInfo.size();ii++)
     {
@@ -218,6 +221,7 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
             glTexID = scene->getGLTexture(thisTexInfo.texId);
 //            if (!glTexID)
 //                NSLog(@"Missing texture");
+            anyTextures = true;
         }
         glTexIDs.push_back(glTexID);
     }
@@ -225,7 +229,7 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
     if (!prog)
         return;
 
-    float fade = 1.0;
+    float theFade = fade;
 
     // Only range based fade on the big drawables
     if (frameInfo.heightAboveSurface > 0.0)
@@ -244,19 +248,33 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
                 factor = b;
         }
         
-        fade = fade * factor;
+        theFade = theFade * factor;
     }
+    
+    // If it's totally faded out, don't waste the rendering
+    if (theFade <= 0.0)
+        return;
 
     // Model/View/Projection matrix
     prog->setUniform("u_mvpMatrix", frameInfo.mvpMat);
     prog->setUniform("u_mvMatrix", frameInfo.viewAndModelMat);
     prog->setUniform("u_mvNormalMatrix", frameInfo.viewModelNormalMat);
     
+    // Fill the a_singleMatrix attribute with default values
+    const OpenGLESAttribute *matAttr = prog->findAttribute("a_singleMatrix");
+    if (matAttr)
+    {
+        glVertexAttrib4f(matAttr->index,1.0,0.0,0.0,0.0);
+        glVertexAttrib4f(matAttr->index+1,0.0,1.0,0.0,0.0);
+        glVertexAttrib4f(matAttr->index+2,0.0,0.0,1.0,0.0);
+        glVertexAttrib4f(matAttr->index+3,0.0,0.0,0.0,1.0);
+    }
+    
     // Fade is always mixed in
-    prog->setUniform("u_fade", fade);
+    prog->setUniform("u_fade", theFade);
     
     // Let the shaders know if we even have a texture
-    prog->setUniform("u_hasTexture", !glTexIDs.empty());
+    prog->setUniform("u_hasTexture", anyTextures);
 
     // The program itself may have some textures to bind
     bool hasTexture[WhirlyKitMaxTextures];
@@ -290,15 +308,18 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
     {
         glGenVertexArraysOES(1,&theBuffer.vertexArrayObj);
         glBindVertexArrayOES(theBuffer.vertexArrayObj);
+        CheckGLError("BasicDrawable::drawVBO2() glBindVertexArrayOES");
 
         glBindBuffer(GL_ARRAY_BUFFER,theBuffer.vertexBufferId);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, theBuffer.elementBufferId);
+        CheckGLError("BasicDrawable::drawVBO2() glBindBuffer");
 
         // Vertex array
         if (vertAttr)
         {
             glVertexAttribPointer(vertAttr->index, 3, GL_FLOAT, GL_FALSE, singleVertexSize, 0);
             glEnableVertexAttribArray ( vertAttr->index );
+            CheckGLError("BasicDrawable::drawVBO2() glEnableVertexAttribArray");
         }
         
         const OpenGLESAttribute *progAttrs[vertexAttributes.size()];
@@ -316,11 +337,13 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
                     progAttrs[ii] = progAttr;
                     glVertexAttribPointer(progAttr->index, attr.glEntryComponents(), attr.glType(), attr.glNormalize(), singleVertexSize, CALCBUFOFF(0, attr.buffer));
                     glEnableVertexAttribArray(progAttr->index);
+                    CheckGLError("BasicDrawable::drawVBO2() glEnableVertexAttribArray");
                 }
             }
         }
         
         glBindVertexArrayOES(0);
+        CheckGLError("BasicDrawable::drawVBO2() glBindVertexArrayOES(0)");
         
         // Let a subclass set up their own VAO state
         setupAdditionalVAO(prog,theBuffer.vertexArrayObj);
@@ -334,6 +357,7 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
         
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        CheckGLError("BasicDrawable::drawVBO2() glBindBuffer");
     }
     
     // For the program attributes that we're not filling in, we need to provide defaults
@@ -347,7 +371,9 @@ void BigDrawable::draw(WhirlyKitRendererFrameInfo *frameInfo,Scene *scene)
     
     // Draw it
     glBindVertexArrayOES(theBuffer.vertexArrayObj);
-    glDrawElements(GL_TRIANGLES, theBuffer.numElement, GL_UNSIGNED_SHORT, 0);
+    CheckGLError("BasicDrawable::drawVBO2() glBindVertexArrayOES");
+    if (theBuffer.numElement != 0)
+        glDrawElements(GL_TRIANGLES, theBuffer.numElement, GL_UNSIGNED_SHORT, 0);
     glBindVertexArrayOES(0);
     
     // Unbind any texture
@@ -583,6 +609,10 @@ void BigDrawable::executeFlush(int whichBuffer)
         elBuffer = (GLubyte *)glMapBufferOES(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
     else
         elBuffer = (GLubyte *)glMapBufferRange(GL_ELEMENT_ARRAY_BUFFER, 0, numElementBytes, GL_MAP_WRITE_BIT);
+
+    if(!elBuffer)
+        return;
+
     GLubyte *elBufPtr = elBuffer;
     int elBufferSize = 0;
     for (ElementChunkSet::iterator it = elementChunks.begin();
@@ -739,6 +769,14 @@ void BigDrawableDrawPriorityChangeRequest::execute(Scene *scene,WhirlyKitSceneRe
     BigDrawableRef bigDraw = boost::dynamic_pointer_cast<BigDrawable>(draw);
     if (bigDraw)
         bigDraw->setDrawPriority(drawPriority);
+}
+    
+void BigDrawableFadeChangeRequest::execute(Scene *scene,WhirlyKitSceneRendererES *renderer,WhirlyKitView *view)
+{
+    DrawableRef draw = scene->getDrawable(drawID);
+    BigDrawableRef bigDraw = boost::dynamic_pointer_cast<BigDrawable>(draw);
+    if (bigDraw)
+        bigDraw->setFade(fade);
 }
 
 void BigDrawableProgramIDChangeRequest::execute(Scene *scene,WhirlyKitSceneRendererES *renderer,WhirlyKitView *view)

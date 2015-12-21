@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/4/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -28,6 +28,10 @@
 using namespace Eigen;
 using namespace WhirlyKit;
 
+// Number of connections among all remote tile sources
+static int numConnections = 0;
+static bool trackConnections = false;
+
 @implementation MaplyRemoteTileInfo
 {
     NSDictionary *_jsonSpec;
@@ -36,10 +40,11 @@ using namespace WhirlyKit;
     bool cacheInit;
     int _minZoom,_maxZoom;
     int _pixelsPerSide;
+    bool replaceURL;
     std::vector<Mbr> mbrs;
 }
 
-- (id)initWithBaseURL:(NSString *)baseURL ext:(NSString *)ext minZoom:(int)minZoom maxZoom:(int)maxZoom
+- (instancetype)initWithBaseURL:(NSString *)baseURL ext:(NSString *)ext minZoom:(int)minZoom maxZoom:(int)maxZoom
 {
     self = [super init];
     if (!self)
@@ -52,11 +57,12 @@ using namespace WhirlyKit;
     _pixelsPerSide = 256;
     _timeOut = 0.0;
     _coordSys = [[MaplySphericalMercator alloc] initWebStandard];
+    replaceURL = [baseURL containsString:@"{y}"] && [baseURL containsString:@"{x}"]; // && [baseURL containsString:@"{z}"];
     
     return self;
 }
 
-- (id)initWithTilespec:(NSDictionary *)jsonDict
+- (instancetype)initWithTilespec:(NSDictionary *)jsonDict
 {
     self = [super init];
     if (!self)
@@ -113,7 +119,7 @@ using namespace WhirlyKit;
     mbrs.push_back(mbr);
 }
 
-- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox *)bbox
+- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox)bbox
 {
     if(tileID.level > _maxZoom)
       return false;
@@ -121,7 +127,7 @@ using namespace WhirlyKit;
     if (mbrs.empty())
         return true;
     
-    Mbr mbr(Point2f(bbox->ll.x,bbox->ll.y),Point2f(bbox->ur.x,bbox->ur.y));
+    Mbr mbr(Point2f(bbox.ll.x,bbox.ll.y),Point2f(bbox.ur.x,bbox.ur.y));
     for (unsigned int ii=0;ii<mbrs.size();ii++)
         if (mbr.overlaps(mbrs[ii]))
             return true;
@@ -146,11 +152,11 @@ using namespace WhirlyKit;
         cacheInit = true;
     }
     
-    NSString *localName = [NSString stringWithFormat:@"%@/%d_%d_%d.%@",_cacheDir,tileID.level,tileID.x,tileID.y,_ext];
+    NSString *localName = [NSString stringWithFormat:@"%@/%d_%d_%d.%@",_cacheDir,tileID.level,tileID.x,tileID.y,(_ext ? _ext : @"unk")];
     return localName;
 }
 
-- (bool)tileIsLocal:(MaplyTileID)tileID
+- (bool)tileIsLocal:(MaplyTileID)tileID frame:(int)frame
 {
     if (!_cacheDir)
         return false;
@@ -207,11 +213,26 @@ using namespace WhirlyKit;
         if (_timeOut != 0.0)
             [urlReq setTimeoutInterval:_timeOut];
     } else {
-        // Fetch the traditional way
-        NSString *fullURLStr = [NSString stringWithFormat:@"%@%d/%d/%d.%@",_baseURL,tileID.level,tileID.x,y,_ext];
-        urlReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:fullURLStr]];
-        if (_timeOut != 0.0)
-            [urlReq setTimeoutInterval:_timeOut];
+        if (replaceURL)
+        {
+            // Fetch the traditional way
+            NSString *fullURLStr = [[[_baseURL stringByReplacingOccurrencesOfString:@"{z}" withString:[@(tileID.level) stringValue]]
+                                     stringByReplacingOccurrencesOfString:@"{x}" withString:[@(tileID.x) stringValue]]
+                                    stringByReplacingOccurrencesOfString:@"{y}" withString:[@(y) stringValue]];
+            if (_ext)
+                fullURLStr = [NSString stringWithFormat:@"%@.%@",fullURLStr,_ext];
+            urlReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:fullURLStr]];
+            if (_timeOut != 0.0)
+                [urlReq setTimeoutInterval:_timeOut];
+        } else {
+            // Fetch the traditional way
+            NSMutableString *fullURLStr = [NSMutableString stringWithFormat:@"%@%d/%d/%d.%@",_baseURL,tileID.level,tileID.x,y,_ext];
+            if (_queryStr)
+                [fullURLStr appendFormat:@"?%@",_queryStr];
+            urlReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:fullURLStr]];
+            if (_timeOut != 0.0)
+                [urlReq setTimeoutInterval:_timeOut];
+        }
     }
     
     return urlReq;
@@ -224,7 +245,7 @@ using namespace WhirlyKit;
     Maply::TileFetchOpSet tileSet;
 }
 
-- (id)initWithBaseURL:(NSString *)baseURL ext:(NSString *)ext minZoom:(int)minZoom maxZoom:(int)maxZoom
+- (instancetype)initWithBaseURL:(NSString *)baseURL ext:(NSString *)ext minZoom:(int)minZoom maxZoom:(int)maxZoom
 {
     self = [super init];
     if (!self)
@@ -237,7 +258,7 @@ using namespace WhirlyKit;
     return self;
 }
 
-- (id)initWithTilespec:(NSDictionary *)jsonDict
+- (instancetype)initWithTilespec:(NSDictionary *)jsonDict
 {
     self = [super init];
     if (!self)
@@ -250,7 +271,7 @@ using namespace WhirlyKit;
     return self;
 }
 
-- (id)initWithInfo:(MaplyRemoteTileInfo *)info
+- (instancetype)initWithInfo:(MaplyRemoteTileInfo *)info
 {
     self = [super init];
     if (!self)
@@ -275,6 +296,16 @@ using namespace WhirlyKit;
         }
         tileSet.clear();
     }
+}
+
++ (void)setTrackConnections:(bool)track
+{
+    trackConnections = track;
+}
+
++ (int)numOutstandingConnections
+{
+    return numConnections;
 }
 
 - (MaplyCoordinateSystem *)coordSys
@@ -312,14 +343,32 @@ using namespace WhirlyKit;
     return _tileInfo.pixelsPerSide;
 }
 
-- (bool)tileIsLocal:(MaplyTileID)tileID
+- (bool)tileIsLocal:(MaplyTileID)tileID frame:(int)frame
 {
-    return [_tileInfo tileIsLocal:tileID];
+    return [_tileInfo tileIsLocal:tileID frame:frame];
 }
 
-- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox *)bbox
+- (bool)validTile:(MaplyTileID)tileID bbox:(MaplyBoundingBox)bbox
 {
     return [_tileInfo validTile:tileID bbox:bbox];
+}
+
+- (void)tileUnloaded:(MaplyTileID)tileID
+{
+    if ([_delegate respondsToSelector:@selector(remoteTileSource:tileUnloaded:)])
+        [_delegate remoteTileSource:self tileUnloaded:tileID];
+}
+
+- (void)tileWasEnabled:(MaplyTileID)tileID
+{
+    if ([_delegate respondsToSelector:@selector(remoteTileSource:tileEnabled:)])
+        [_delegate remoteTileSource:self tileEnabled:tileID];
+}
+
+- (void)tileWasDisabled:(MaplyTileID)tileID
+{
+    if ([_delegate respondsToSelector:@selector(remoteTileSource:tileDisabled:)])
+        [_delegate remoteTileSource:self tileDisabled:tileID];
 }
 
 // Clear out the operation associated with a tile
@@ -336,7 +385,13 @@ using namespace WhirlyKit;
 // For a remote tile source, this one only works if it's local
 - (id)imageForTile:(MaplyTileID)tileID
 {
-    if ([_tileInfo tileIsLocal:tileID])
+    if (trackConnections)
+        @synchronized([MaplyRemoteTileSource class])
+        {
+            numConnections++;
+        }
+    
+    if ([_tileInfo tileIsLocal:tileID frame:-1])
     {
         bool doLoad = true;
         NSString *fileName = [_tileInfo fileNameForTile:tileID];
@@ -351,7 +406,24 @@ using namespace WhirlyKit;
             }
         }
         if (doLoad)
-            return [NSData dataWithContentsOfFile:fileName];
+        {
+            if (trackConnections)
+                @synchronized([MaplyRemoteTileSource class])
+            {
+                numConnections--;
+            }
+            NSData *tileData = [NSData dataWithContentsOfFile:fileName];
+            if (tileData)
+            {
+                if ([_delegate respondsToSelector:@selector(remoteTileSource:modifyTileReturn:forTile:)])
+                {
+                    tileData = [_delegate remoteTileSource:self modifyTileReturn:tileData forTile:tileID];
+                }
+            }
+            
+            if (tileData)
+                return tileData;
+        }
         
     }
     
@@ -363,25 +435,49 @@ using namespace WhirlyKit;
         NSData *tileData = [NSURLConnection sendSynchronousRequest:urlReq
                                                  returningResponse:&response error:&error];
         
+        // Look at the response
+        NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+        if (httpResponse.statusCode != 200)
+            tileData = nil;
+        
         // Let's also write it back out for the cache
-        if (_tileInfo.cacheDir)
+        if (_tileInfo.cacheDir && tileData)
             [tileData writeToFile:[_tileInfo fileNameForTile:tileID] atomically:YES];
         
+        if ([_delegate respondsToSelector:@selector(remoteTileSource:modifyTileReturn:forTile:)])
+            tileData = [_delegate remoteTileSource:self modifyTileReturn:tileData forTile:tileID];
+        
+        if (trackConnections)
+            @synchronized([MaplyRemoteTileSource class])
+        {
+            numConnections--;
+        }
         return tileData;
     }
     
+    if (trackConnections)
+        @synchronized([MaplyRemoteTileSource class])
+    {
+        numConnections--;
+    }
     return nil;
 }
 
 - (void)startFetchLayer:(MaplyQuadImageTilesLayer *)layer tile:(MaplyTileID)tileID
 {
+    if (trackConnections)
+        @synchronized([MaplyRemoteTileSource class])
+    {
+        numConnections++;
+    }
+    
     NSData *imgData = nil;
     NSString *fileName = nil;
     // Look for the image in the cache first
     if (_tileInfo.cacheDir)
     {
         fileName = [_tileInfo fileNameForTile:tileID];
-        if ([_tileInfo tileIsLocal:tileID])
+        if ([_tileInfo tileIsLocal:tileID frame:-1])
         {
             imgData = [self imageForTile:tileID];
         }
@@ -394,14 +490,27 @@ using namespace WhirlyKit;
 
         // Let the paging layer know about it
         [layer loadedImages:imgData forTile:tileID];
+        
+        if (trackConnections)
+            @synchronized([MaplyRemoteTileSource class])
+        {
+            numConnections--;
+        }
     } else {
         NSURLRequest *urlReq = [_tileInfo requestForTile:tileID];
         if(!urlReq)
         {
-            [layer loadError:nil forTile:tileID];
+			NSError *error = [NSError errorWithDomain:@"maply" code:1 userInfo:@{}];
+			[layer loadError:error forTile:tileID];
             if (self.delegate && [self.delegate respondsToSelector:@selector(remoteTileSource:tileDidNotLoad:error:)])
-                [self.delegate remoteTileSource:self tileDidNotLoad:tileID error:nil];
+                [self.delegate remoteTileSource:self tileDidNotLoad:tileID error:error];
             [self clearTile:tileID];
+            if (trackConnections)
+                @synchronized([MaplyRemoteTileSource class])
+            {
+                numConnections--;
+            }
+            
             return;
         }
         
@@ -421,14 +530,23 @@ using namespace WhirlyKit;
                     if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(remoteTileSource:tileDidLoad:)])
                         [weakSelf.delegate remoteTileSource:weakSelf tileDidLoad:tileID];
                     
-                    // Let the paging layer know about it
-                    [layer loadedImages:imgData forTile:tileID];
-
                     // Let's also write it back out for the cache
                     if (weakSelf.tileInfo.cacheDir)
                         [imgData writeToFile:fileName atomically:YES];
+
+                    if ([_delegate respondsToSelector:@selector(remoteTileSource:modifyTileReturn:forTile:)])
+                        imgData = [_delegate remoteTileSource:self modifyTileReturn:imgData forTile:tileID];
+
+                    // Let the paging layer know about it
+                    [layer loadedImages:imgData forTile:tileID];
                     
                     [weakSelf clearTile:tileID];
+                }
+
+                if (trackConnections)
+                    @synchronized([MaplyRemoteTileSource class])
+                {
+                    numConnections--;
                 }
             }
         failure:
@@ -441,6 +559,12 @@ using namespace WhirlyKit;
                     if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(remoteTileSource:tileDidNotLoad:error:)])
                         [weakSelf.delegate remoteTileSource:weakSelf tileDidNotLoad:tileID error:error];
                     [weakSelf clearTile:tileID];
+                }
+
+                if (trackConnections)
+                    @synchronized([MaplyRemoteTileSource class])
+                {
+                    numConnections--;
                 }
             }];
         Maply::TileFetchOp fetchOp(tileID);

@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 9/19/12.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
 @property (nonatomic,weak) NSObject<MaplyInteractionLayerDelegate> * viewController;
 
 // Create with the map view
-- (id)initWithMapView:(MaplyView *)inMapView;
+- (instancetype)initWithMapView:(MaplyView *)inMapView;
 
 // Call this to process a tap with the selection layer
 // It will call the given selector if there was no selection

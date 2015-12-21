@@ -31,18 +31,22 @@
 #define kMaplyTestMapBoxSat @"MapBox Satellite - Remote"
 #define kMaplyTestMapBoxTerrain @"MapBox Terrain - Remote"
 #define kMaplyTestMapBoxRegular @"MapBox Regular - Remote"
+#define kMaplyTestNightAndDay @"Night/Day Images - Remote"
 #define kMaplyTestQuadTest @"Quad Test Layer"
 #define kMaplyTestQuadTestAnimate @"Quad Test Layer - Animated"
 #define kMaplyTestQuadVectorTest @"Quad Vector Test Layer"
+#define kMaplyTestElevation @"Cesium Elevation Test Layer"
 
 // Overlay image layers
 #define kMaplyTestCategoryOverlayLayers @"Overlay layers"
 
-#define kMaplyTestUSGSOrtho @"USGS Ortho (WMS) - Remote"
+#define kMaplyTestUSGSOrtho @"USGS_EROS_Ortho_NAIP"
 #define kMaplyTestOWM @"OpenWeatherMap - Remote"
 #define kMaplyTestForecastIO @"Forecast.IO Snapshot - Remote"
 #define kMaplyTestMapboxStreets @"MapBox Streets Vectors - Remote"
 #define kMaplyMapzenVectors @"Mapzen Vectors - Remote"
+#define kMaplyWindTest @"Wind Particles - Remote"
+#define kMaplyOrdnanceSurveyTest @"British National Grid Test - Local"
 
 // Objects we can display
 #define kMaplyTestCategoryObjects @"Maply Objects"
@@ -55,11 +59,17 @@
 #define kMaplyTestShapeCylinder @"Shapes: Cylinders"
 #define kMaplyTestShapeSphere @"Shapes: Spheres"
 #define kMaplyTestShapeGreatCircle @"Shapes: Great Circles"
+#define kMaplyTestShapeArrows @"Shapes: Arrows"
+#define kMaplyTestModels @"Models"
 #define kMaplyTestCountry @"Countries"
 #define kMaplyTestLoftedPoly @"Lofted Polygons"
+#define kMaplyTestQuadMarkers @"Quad Paging Markers"
 #define kMaplyTestMegaMarkers @"Mega Markers"
+#define kMaplyTestMarkerCluster @"Marker Clustering"
 #define kMaplyTestLatLon @"Lon/Lat lines"
 #define kMaplyTestRoads @"SF Roads"
+#define kMaplyTestArcGIS @"ArcGIS Vectors"
+#define kMaplyTestStarsAndSun @"Stars and Sun"
 
 // Animation
 #define kMaplyTestCategoryAnimation @"Animation"

@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 6/19/14.
- *  Copyright 2011-2014 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -27,16 +27,15 @@
 @interface MaplyPagingVectorTestTileSource : NSObject<MaplyPagingDelegate>
 
 /// Initialize with the coordinate system, min and max zoom levels, and the number of images to return
-- (id)initWithCoordSys:(MaplyCoordinateSystem *)coordSys minZoom:(int)minZoom maxZoom:(int)maxZoom;
+- (nonnull instancetype)initWithCoordSys:(MaplyCoordinateSystem *__nonnull)coordSys minZoom:(int)minZoom maxZoom:(int)maxZoom;
 
 /// Coordinate system we're pretending to be in
-@property (nonatomic,readonly) MaplyCoordinateSystem *coordSys;
+@property (nonatomic,readonly,nonnull) MaplyCoordinateSystem *coordSys;
 
 /// Minimum zoom level supported
 @property (nonatomic) int minZoom;
 
 /// Max zoom level supported
 @property (nonatomic) int maxZoom;
-
 
 @end

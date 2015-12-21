@@ -3,7 +3,7 @@
  *  WhirlyGlobe-MaplyComponent
  *
  *  Created by Steve Gifford on 4/3/13.
- *  Copyright 2011-2013 mousebird consulting
+ *  Copyright 2011-2015 mousebird consulting
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -41,9 +41,9 @@
 /** @brief Initialize with a view controller
     @details The default initializer just takes a view controller.  If you replace this with your own, be sure to pass in what you need.
   */
-- (id)initWithViewController:(MaplyBaseViewController *)viewC;
+- (nonnull instancetype)initWithViewController:(MaplyBaseViewController *__nonnull)viewC;
 
 /// @brief The view controller this active object is associated with
-@property (nonatomic,weak,readonly) MaplyBaseViewController *viewC;
+@property (nonatomic,weak,readonly) MaplyBaseViewController *__nullable viewC;
 
 @end

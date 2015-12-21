@@ -74,11 +74,13 @@
                                    kMaplyTestStamenWatercolor: @(NO),
                                                 kMaplyTestOSM: @(NO),
                                           kMaplyTestMapBoxSat: @(NO),
-                                      kMaplyTestMapBoxTerrain: @(NO),
-                                      kMaplyTestMapBoxRegular: @(NO),
+//                                      kMaplyTestMapBoxTerrain: @(NO),
+//                                      kMaplyTestMapBoxRegular: @(NO),
                                            kMaplyTestQuadTest: @(NO),
+                                        kMaplyTestNightAndDay: @(NO),
                                      kMaplyTestQuadVectorTest: @(NO),
-                                    kMaplyTestQuadTestAnimate: @(NO)}
+                                    kMaplyTestQuadTestAnimate: @(NO),
+									      kMaplyTestElevation: @(NO)}
                                                  singleSelect:true]];
     
     // We won't let the user do some things in terrain mode (overlay, basically)
@@ -93,7 +95,9 @@
                   kMaplyTestOWM: @(NO),
                   kMaplyTestForecastIO: @(NO),
                   kMaplyTestMapboxStreets: @(NO),
-//                  kMaplyMapzenVectors: @(NO)
+                  kMaplyMapzenVectors: @(NO),
+                  kMaplyWindTest: @(NO),
+                  kMaplyOrdnanceSurveyTest: @(NO)
                   }
                                        singleSelect:false],
                [ConfigSection ConfigSectionWithName:kMaplyTestCategoryObjects
@@ -106,11 +110,18 @@
                   kMaplyTestShapeCylinder: @(NO),
                   kMaplyTestShapeSphere: @(NO),
                   kMaplyTestShapeGreatCircle: @(NO),
+                  kMaplyTestShapeArrows: @(NO),
+                  kMaplyTestModels: @(NO),
                   kMaplyTestCountry: @(NO),
                   kMaplyTestLoftedPoly: @(NO),
+                  kMaplyTestQuadMarkers: @(NO),
                   kMaplyTestMegaMarkers: @(NO),
+                  kMaplyTestMarkerCluster: @(NO),
                   kMaplyTestLatLon: @(NO),
-                  kMaplyTestRoads: @(NO)}
+                  kMaplyTestRoads: @(NO),
+                  kMaplyTestArcGIS: @(NO),
+                  kMaplyTestStarsAndSun: @(NO),
+                  }
                                        singleSelect:false],
                [ConfigSection ConfigSectionWithName:kMaplyTestCategoryAnimation
                                                rows:
@@ -127,7 +138,8 @@
               kMaplyTestOWM: @(NO),
               kMaplyTestForecastIO: @(NO),
               kMaplyTestMapboxStreets: @(NO),
-//              kMaplyMapzenVectors: @(NO)
+              kMaplyMapzenVectors: @(NO),
+              kMaplyOrdnanceSurveyTest: @(NO)
               }
                                    singleSelect:false],
            [ConfigSection ConfigSectionWithName:kMaplyTestCategoryObjects
@@ -138,9 +150,14 @@
               kMaplyTestMarker3D: @(NO),
               kMaplyTestSticker: @(NO),
               kMaplyTestCountry: @(NO),
+              kMaplyTestQuadMarkers: @(NO),
               kMaplyTestMegaMarkers: @(NO),
+              kMaplyTestMarkerCluster: @(NO),
               kMaplyTestLatLon: @(NO),
-              kMaplyTestRoads: @(NO)}
+              kMaplyTestRoads: @(NO),
+              kMaplyTestArcGIS: @(NO),
+              kMaplyTestStarsAndSun: @(NO)
+              }
                                    singleSelect:false]]];
             break;
     }
