@@ -14,7 +14,6 @@
 #import "MaplyTestCase.h"
 #import "MaplyTestResult.h"
 #import "GeographyClassTestCase.h"
-#import "AFNetworking.h"
 #import "CesiumElevationTestCase.h"
 #import "MapBoxVectorTestCase.h"
 #import "MaplyMapnikVectorTiles.h"
@@ -26,8 +25,8 @@
 #import "WideVectorsTestCase.h"
 #import "ShapesTestCase.h"
 #import "LoftedPolysTestCase.h"
-
-
-
+#import "CartoDBTestCase.h"
+#import "ElevationLocalDatabase.h"
+#import "RunwayBuilderTestCase.h"
 
 #endif

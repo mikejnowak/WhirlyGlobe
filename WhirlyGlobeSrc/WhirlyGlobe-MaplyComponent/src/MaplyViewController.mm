@@ -167,8 +167,6 @@ using namespace Maply;
 
 - (void)dealloc
 {
-    if (mapScene)
-        [self clear];
 }
 
 // Change the view window and force a draw
@@ -309,7 +307,7 @@ using namespace Maply;
     {
         // Wire up the gesture recognizers
         tapDelegate = [MaplyTapDelegate tapDelegateForView:glView mapView:mapView];
-        panDelegate = [MaplyPanDelegate panDelegateForView:glView mapView:mapView];
+        panDelegate = [MaplyPanDelegate panDelegateForView:glView mapView:mapView useCustomPanRecognizer:self.inScrollView];
         pinchDelegate = [MaplyPinchDelegate pinchDelegateForView:glView mapView:mapView];
         pinchDelegate.minZoom = [mapView minHeightAboveSurface];
         pinchDelegate.maxZoom = [mapView maxHeightAboveSurface];
@@ -750,7 +748,7 @@ using namespace Maply;
 {
 	GeoCoord geoCoord = mapView.coordAdapter->getCoordSystem()->localToGeographic(mapView.coordAdapter->displayToLocal(mapView.loc));
 
-	return {.x = geoCoord.x(), .y = geoCoord.x()};
+	return {.x = geoCoord.x(), .y = geoCoord.y()};
 }
 
 - (float)getHeight
@@ -1123,6 +1121,11 @@ using namespace Maply;
             }
         }
     }
+}
+
+- (void)requirePanGestureRecognizerToFailForGesture:(UIGestureRecognizer *)other {
+    if (panDelegate && panDelegate.gestureRecognizer)
+        [other requireGestureRecognizerToFail:panDelegate.gestureRecognizer];
 }
 
 

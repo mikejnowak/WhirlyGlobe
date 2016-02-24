@@ -21,7 +21,6 @@
 #import <vector>
 #import <set>
 #import "MaplyMultiplexTileSource.h"
-#import "AFHTTPRequestOperation.h"
 #import "MaplyQuadImageTilesLayer.h"
 
 namespace Maply
@@ -30,8 +29,8 @@ namespace Maply
 class TileFetch
 {
 public:
-    TileFetch(int which,AFHTTPRequestOperation *op) : which(which), op(op) { }
-    TileFetch() : which(-1), op(nil) { }
+    TileFetch(int which,NSURLSessionDataTask *task) : which(which), task(task) { }
+    TileFetch() : which(-1), task(nil) { }
     
     bool operator < (const TileFetch &that) const
     {
@@ -39,7 +38,7 @@ public:
     }
     
     int which;
-    AFHTTPRequestOperation *op;
+    NSURLSessionDataTask *task;
 };
 typedef std::set<TileFetch> TileFetchSet;
     
@@ -76,7 +75,7 @@ public:
         for (it = fetches.begin();
              it != fetches.end(); ++it)
         {
-            [it->op cancel];
+            [it->task cancel];
         }
 
         fetches.clear();
@@ -100,7 +99,7 @@ public:
         if (it != fetches.end())
         {
             fetches.erase(it);
-            [it->op cancel];
+            [it->task cancel];
         }
         
         tileData[which] = nil;
@@ -294,10 +293,15 @@ static bool trackConnections = false;
 }
 
 // Got tile data back, figure out what to do with it
-- (void)gotTile:(MaplyTileID)tileID which:(int)which data:(id)tileData layer:(MaplyQuadImageTilesLayer *)layer
+- (void)gotTile:(MaplyTileID)tileID which:(int)which data:(id)originalTileData layer:(MaplyQuadImageTilesLayer *)layer fromCache:(bool)wasFromCache
 {
 //    NSLog(@"Got tile: %d: (%d,%d), %d",tileID.level,tileID.x,tileID.y,which);
     
+    id tileData = originalTileData;
+    if (originalTileData)
+        if ([_delegate respondsToSelector:@selector(remoteTileSource:modifyTileReturn:forTile:)])
+            tileData = [_delegate remoteTileSource:self modifyTileReturn:tileData forTile:tileID];
+
     // Look for it in the bit list
     bool done = false;
     bool shouldNotify = false;
@@ -337,13 +341,16 @@ static bool trackConnections = false;
             sortedTiles.insert(theTile);
     }
     
-    // Let's write it back out for the cache
-    MaplyRemoteTileInfo *tileSource = _tileSources[which];
-    NSString *fileName = [tileSource fileNameForTile:tileID];
-    if (fileName && [tileData isKindOfClass:[NSData class]])
+    if (!wasFromCache)
     {
-        NSData *imgData = tileData;
-        [imgData writeToFile:fileName atomically:YES];
+        // Let's write it back out for the cache
+        MaplyRemoteTileInfo *tileSource = _tileSources[which];
+        NSString *fileName = [tileSource fileNameForTile:tileID];
+        if (fileName && [originalTileData isKindOfClass:[NSData class]])
+        {
+            NSData *imgData = originalTileData;
+            [imgData writeToFile:fileName atomically:YES];
+        }
     }
 
     // We're done, so let everyone know
@@ -441,7 +448,7 @@ static bool trackConnections = false;
                 if (!imgData)
                     [self failedToGetTile:tileID frame:frame error:nil layer:layer];
                 else
-                    [self gotTile:tileID which:which data:imgData layer:layer];
+                    [self gotTile:tileID which:which data:imgData layer:layer fromCache:true];
 
                 if (trackConnections)
                     @synchronized([MaplyMultiplexTileSource class])
@@ -465,40 +472,45 @@ static bool trackConnections = false;
 
                 // Kick off an async request for the data
                 MaplyMultiplexTileSource __weak *weakSelf = self;
-                AFHTTPRequestOperation *op = [[AFHTTPRequestOperation alloc] initWithRequest:urlReq];
-                dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-                op.completionQueue = queue;
-                [op setCompletionBlockWithSuccess:
-                 ^(AFHTTPRequestOperation *operation, id responseObject)
-                 {
-                     if (weakSelf)
-                         [self gotTile:tileID which:which data:responseObject layer:layer];
-                     
-                     if (trackConnections)
-                         @synchronized([MaplyMultiplexTileSource class])
-                     {
-                         numConnections--;
-                     }
-                 }
-                                          failure:
-                 ^(AFHTTPRequestOperation *operation, NSError *error)
-                 {
-                     if (weakSelf)
-                     {
-                         if (weakSelf.acceptFailures)
-                             [self gotTile:tileID which:which data:error layer:layer];
-                         else
-                             [self failedToGetTile:tileID frame:frame error:error layer:layer];
-                     }
 
-                     if (trackConnections)
-                         @synchronized([MaplyMultiplexTileSource class])
-                     {
-                         numConnections--;
-                     }
-                 }];
+
+                NSURLSession *session = [NSURLSession sharedSession];
+                NSURLSessionDataTask *task = [session dataTaskWithRequest:urlReq completionHandler:
+                ^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+                        if (!error) {
+                            if (weakSelf)
+                                [self gotTile:tileID which:which data:data layer:layer fromCache:false];
+
+                            if (trackConnections)
+                                @synchronized([MaplyMultiplexTileSource class])
+                            {
+                                numConnections--;
+                            }
+
+                        } else {
+                            if (weakSelf)
+                            {
+                                if (weakSelf.acceptFailures)
+                                    [self gotTile:tileID which:which data:error layer:layer fromCache:false];
+                                else
+                                    [self failedToGetTile:tileID frame:frame error:error layer:layer];
+                            }
+
+                            if (trackConnections)
+                                @synchronized([MaplyMultiplexTileSource class])
+                            {
+                                numConnections--;
+                            }
+
+                        }
+
+                    });
+                }];
                 
-                newTile.fetches.insert(Maply::TileFetch(which,op));
+                newTile.fetches.insert(Maply::TileFetch(which, task));
+
             } else {
                 [self failedToGetTile:tileID frame:frame error:nil layer:layer];
             }
@@ -514,7 +526,7 @@ static bool trackConnections = false;
         // Kick off the fetch operations
         for (Maply::TileFetchSet::iterator it = newTile.fetches.begin();
              it != newTile.fetches.end(); ++it)
-            [it->op start];
+            [it->task resume];
     }
     // Run the work blocks that fetch local data
     for (unsigned int ii=0;ii<workBlocks.size();ii++)

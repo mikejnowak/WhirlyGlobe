@@ -186,7 +186,7 @@ typedef NS_ENUM(NSInteger, MaplyQuadImageFormat) {
 /** @brief For the case where we're loading individual frames, this sets the order to load them in.
     @details When doing animation and loading frames, we have the option of loading them one by one.  Normally we start from 0 and work our way up, but you can control that order here.
   */
-- (void)setFrameLoadingPriority:(NSArray *__nonnull)priorities;
+- (void)setFrameLoadingPriority:(NSArray *__nullable)priorities;
 
 /** @brief Include the original z values in the tile geometry for a custom shader.
     @details When generating tiles for the globe we project the coordinates from their local system (probably MaplySphericalMercator) into a display system.  If you wanted the original z values, to say, write a custom shader that maps color to elevation, that data is now missing.
@@ -331,13 +331,13 @@ typedef NS_ENUM(NSInteger, MaplyQuadImageFormat) {
     @details If the tile source implements startFetchForTile: then this is how it tells us about a specific failure.
     @details It can also just call loadedImages:forTile: with nil, but this is more helpful.
   */
-- (void)loadError:(NSError *__nonnull)error forTile:(MaplyTileID)tileID;
+- (void)loadError:(NSError *__nullable)error forTile:(MaplyTileID)tileID;
 
 /** @brief Pass back an error for a given tile and frame (if we're loading animations).
     @details If the tile source implements startFetchForTile: then this is how it tells us about a specific failure.
     @details It can also just call loadedImages:forTile: with nil, but this is more helpful.
  */
-- (void)loadError:(NSError *__nonnull)error forTile:(MaplyTileID)tileID frame:(int)frame;
+- (void)loadError:(NSError *__nullable)error forTile:(MaplyTileID)tileID frame:(int)frame;
 
 /** @brief Status structures describing which frames are loaded.
     @details Query this to find out which frames are completely loaded into memory and which are not.

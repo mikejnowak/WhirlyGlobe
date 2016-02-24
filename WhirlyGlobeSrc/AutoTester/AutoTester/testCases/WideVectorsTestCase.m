@@ -30,9 +30,8 @@
 {
 	MaplyTexture *dashedLineTex,*filledLineTex;
 
-	MaplyLinearTextureBuilder *lineTexBuilder = [[MaplyLinearTextureBuilder alloc] initWithSize:CGSizeMake(8,8)];
+	MaplyLinearTextureBuilder *lineTexBuilder = [[MaplyLinearTextureBuilder alloc] init];
 	[lineTexBuilder setPattern:@[@(4),@(4)]];
-	lineTexBuilder.opacityFunc = MaplyOpacitySin2;
 	UIImage *dashedLineImage = [lineTexBuilder makeImage];
 	dashedLineTex = [baseViewC addTexture:dashedLineImage
 									 desc:@{kMaplyTexMinFilter: kMaplyMinFilterLinear,
@@ -42,9 +41,8 @@
 											kMaplyTexFormat: @(MaplyImageIntRGBA)}
 									 mode:MaplyThreadCurrent];
 	
-	lineTexBuilder = [[MaplyLinearTextureBuilder alloc] initWithSize:CGSizeMake(8,32)];
+	lineTexBuilder = [[MaplyLinearTextureBuilder alloc] init];
 	[lineTexBuilder setPattern:@[@(32)]];
-	lineTexBuilder.opacityFunc = MaplyOpacitySin2;
 	UIImage *lineImage = [lineTexBuilder makeImage];
 	filledLineTex = [baseViewC addTexture:lineImage
 									 desc:@{kMaplyTexMinFilter: kMaplyMinFilterLinear,
@@ -143,17 +141,13 @@
 				  kMaplyDrawPriority: @(200)
 				  }];
 	
-	if ([baseViewC isKindOfClass:[WhirlyGlobeViewController class]]){
-		
+	if ([baseViewC isKindOfClass:[WhirlyGlobeViewController class]]) {
 		[(WhirlyGlobeViewController*)baseViewC animateToPosition:MaplyCoordinateMakeWithDegrees(-122.4192, 37.7793) height:0.3 heading:0.8 time:0.1];
 		[(WhirlyGlobeViewController*)baseViewC animateToPosition:MaplyCoordinateMakeWithDegrees(-122.4192, 37.7793) height:0.1 heading:0.8 time:0.1];
 		[(WhirlyGlobeViewController*)baseViewC animateToPosition:MaplyCoordinateMakeWithDegrees(-122.4192, 37.7793) height:0.005 heading:0.8 time:0.1];
-
-
-
 	}
-	else{
-		if ([baseViewC isKindOfClass:[MaplyViewController class]]){
+	else {
+		if ([baseViewC isKindOfClass:[MaplyViewController class]]) {
 			[(MaplyViewController*)baseViewC animateToPosition:MaplyCoordinateMakeWithDegrees(-122.4192, 37.7793) height:0.3 time:0.1];
 			[(MaplyViewController*)baseViewC animateToPosition:MaplyCoordinateMakeWithDegrees(-122.4192, 37.7793) height:0.1 time:0.1];
 			[(MaplyViewController*)baseViewC animateToPosition:MaplyCoordinateMakeWithDegrees(-122.4192, 37.7793) height:0.005 time:0.1];
@@ -163,6 +157,7 @@
 	
 	return @[lines,screenLines,realLines,labelObj];
 }
+
 - (BOOL)setUpWithGlobe:(WhirlyGlobeViewController *)globeVC{
 	
 	GeographyClassTestCase * baseLayer = [[GeographyClassTestCase alloc]init];
@@ -172,14 +167,12 @@
 	return true;
 }
 
-
-
 - (BOOL)setUpWithMap:(MaplyViewController *)mapVC{
 	GeographyClassTestCase * baseLayer = [[GeographyClassTestCase alloc]init];
 	[baseLayer setUpWithMap:mapVC];
 	[self loadShapeFile:(MaplyBaseViewController*)mapVC];
 
-
 	return true;
 }
+
 @end

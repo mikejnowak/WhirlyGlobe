@@ -122,7 +122,7 @@ bool GeometryRaw::isValid() const
         return false;
     if (type == WhirlyKitGeometryTriangles && triangles.empty())
         return false;
-    if (texId != EmptyIdentity && texCoords.empty())
+    if (texId > 0 && texCoords.empty())
         return false;
     for (unsigned int ii=0;ii<triangles.size();ii++)
     {
@@ -193,7 +193,8 @@ void GeometryRaw::buildDrawables(std::vector<BasicDrawable *> &draws,const Eigen
             if (colorOverride)
                 draw->setColor(*colorOverride);
             draw->setType(GL_TRIANGLES);
-            draw->setTexId(0,texId);
+            if (texId > 0)
+                draw->setTexId(0,texId);
             draws.push_back(draw);
         }
         
@@ -214,11 +215,10 @@ void GeometryRaw::buildDrawables(std::vector<BasicDrawable *> &draws,const Eigen
                 newNorm.normalize();
                 draw->addNormal(newNorm);
             }
-            if (texId != EmptyIdentity)
+            if (texId > 0)
                 draw->addTexCoord(0,texCoords[tri.verts[jj]]);
-            // Note: Turning off colors for the moment
-//            if (!colors.empty() && !colorOverride)
-//                draw->addColor(colors[tri.verts[jj]]);
+            if (!colors.empty() && !colorOverride)
+                draw->addColor(colors[tri.verts[jj]]);
         }
         
         draw->addTriangle(BasicDrawable::Triangle(baseVert,baseVert+1,baseVert+2));
@@ -761,7 +761,7 @@ SimpleIdentity GeometryManager::addGeometryInstances(SimpleIdentity baseGeomID,c
     {
         const GeometryInstance &inst = instances[ii];
         BasicDrawableInstance::SingleInstance singleInst;
-        if (geomInfo.color)
+        if (desc && desc[@"color"])
         {
             singleInst.colorOverride = true;
             singleInst.color = [geomInfo.color asRGBAColor];

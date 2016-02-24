@@ -320,7 +320,7 @@ public:
 {
     int imageFormat = [desc intForKey:kMaplyTexFormat default:MaplyImageIntRGBA];
     bool wrapX = [desc boolForKey:kMaplyTexWrapX default:false];
-    bool wrapY = [desc boolForKey:kMaplyTexWrapX default:false];
+    bool wrapY = [desc boolForKey:kMaplyTexWrapY default:false];
     int magFilter = [desc enumForKey:kMaplyTexMagFilter values:@[kMaplyMinFilterNearest,kMaplyMinFilterLinear] default:0];
     
     int imgWidth = image.size.width * image.scale;
@@ -1583,9 +1583,10 @@ public:
             tex = [self addImage:theImage imageFormat:MaplyImage4Layer8Bit mode:threadMode];
         else if ([theImage isKindOfClass:[MaplyTexture class]])
             tex = (MaplyTexture *)theImage;
-        if (tex.texID)
+        if (tex.texID) {
             inDesc[kMaplyVecTexture] = @(tex.texID);
-        else
+            compObj.textures.insert(tex);
+        } else
             [inDesc removeObjectForKey:kMaplyVecTexture];
     }
     
@@ -2059,13 +2060,17 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
     MaplyComponentObject *compObj = argArray[1];
     NSMutableDictionary *inDesc = argArray[2];
     MaplyThreadMode threadMode = (MaplyThreadMode)[[argArray objectAtIndex:3] intValue];
-    
+
     [self applyDefaultName:kMaplyDrawPriority value:@(kMaplyModelDrawPriorityDefault) toDict:inDesc];
     
     // Might be a custom shader on these
     [self resolveShader:inDesc defaultShader:kMaplyShaderDefaultModelTri];
-    
+
+    // May need a temporary context when setting up label textures
+    EAGLContext *tmpContext = [self setupTempContext:threadMode];
+
     GeometryManager *geomManager = (GeometryManager *)scene->getManager(kWKGeometryManager);
+    WhirlyKitFontTextureManager *fontTexManager = scene->getFontTextureManager();
 
     // Sort the instances with their models
     GeomModelInstancesSet instSort;
@@ -2095,8 +2100,11 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
             // Set up the textures and convert the geometry
             MaplyGeomModel *model = it->model;
             
+            // Reference count the textures for this comp obj
+            compObj.textures.insert(model->maplyTextures.begin(),model->maplyTextures.end());
+            
             // Return an existing base model or make a new one
-            SimpleIdentity baseModelID = [model getBaseModel:self mode:threadMode];
+            SimpleIdentity baseModelID = [model getBaseModel:self fontTexManager:fontTexManager compObj:compObj mode:threadMode];
             
             if (baseModelID != EmptyIdentity)
             {
@@ -2205,6 +2213,8 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
         [userObjects addObject:compObj];
         compObj.underConstruction = false;
     }
+    
+    [self clearTempContext:tmpContext];
 }
 
 // Called in the layer thread
@@ -2813,6 +2823,7 @@ typedef std::set<GeomModelInstances *,struct GeomModelInstancesCmp> GeomModelIns
         wkPartSys.batchSize = partSys.batchSize;
         wkPartSys.totalParticles = partSys.totalParticles;
         wkPartSys.baseTime = partSys.baseTime;
+        wkPartSys.continuousUpdate = partSys.continuousUpdate;
         // Type
         switch (partSys.type)
         {

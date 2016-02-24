@@ -161,8 +161,6 @@ using namespace WhirlyGlobe;
 
 - (void) dealloc
 {
-    if (globeScene)
-        [self clear];
 }
 
 - (void)setDelegate:(NSObject<WhirlyGlobeViewControllerDelegate> *)delegate
@@ -1394,7 +1392,7 @@ using namespace WhirlyGlobe;
     // Ask the delegate where we're supposed to be
     WhirlyGlobeViewControllerAnimationState *animState = [animationDelegate globeViewController:self stateForTime:now];
     
-    [self setViewState:animState];
+    [self setViewStateInternal:animState];
     
     if (lastOne)
     {
@@ -1420,6 +1418,12 @@ using namespace WhirlyGlobe;
 }
 
 - (void)setViewState:(WhirlyGlobeViewControllerAnimationState *)animState
+{
+    [globeView cancelAnimation];
+    [self setViewStateInternal:animState];
+}
+
+- (void)setViewStateInternal:(WhirlyGlobeViewControllerAnimationState *)animState
 {
     Vector3d startLoc(0,0,1);
     

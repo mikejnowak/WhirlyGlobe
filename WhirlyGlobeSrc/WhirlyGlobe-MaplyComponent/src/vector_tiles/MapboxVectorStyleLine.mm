@@ -146,20 +146,8 @@ static unsigned int NextPowOf2(unsigned int val)
             [dashComponents addObject:@(len)];
         }
         
-        // Let's keep the texture a power of 2
-        int texWidth = 4;
-        if (maxWidth <= 4)
-            texWidth=  4;
-        else if (maxWidth <= 8)
-            texWidth = 8;
-        else if (maxWidth <= 16)
-            texWidth = 16;
-        else
-            texWidth = 32;
-        
-        MaplyLinearTextureBuilder *lineTexBuilder = [[MaplyLinearTextureBuilder alloc] initWithSize:CGSizeMake(texWidth,totLenRounded)];
+        MaplyLinearTextureBuilder *lineTexBuilder = [[MaplyLinearTextureBuilder alloc] init];
         [lineTexBuilder setPattern:dashComponents];
-        lineTexBuilder.opacityFunc = MaplyOpacitySin3;
         UIImage *lineImage = [lineTexBuilder makeImage];
         MaplyTexture *filledLineTex = [viewC addTexture:lineImage
                                             imageFormat:MaplyImageIntRGBA

@@ -55,7 +55,8 @@
         _frameInterval = 1;
         self.useRetina = TRUE;
         resizeFail = false;
-        resizeFailRetry = 0;        
+        resizeFailRetry = 0;
+        _pauseDisplayLink = true;
     }
     
     return self;
@@ -108,7 +109,7 @@
                 [displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSRunLoopCommonModes];            
         } else
             displayLink.paused = NO;
-        
+
         _animating = TRUE;
     }
 }
@@ -118,6 +119,8 @@
     if (_animating)
     {
         _animating = FALSE;
+        if (_pauseDisplayLink)
+            displayLink.paused = true;
     }
 }
 
@@ -159,7 +162,11 @@
     // Make sure we're not backgrounded
     UIApplicationState state = [[UIApplication sharedApplication] applicationState];
     if (state == UIApplicationStateBackground)
+    {
+        resizeFail = true;
+        resizeFailRetry = 10;
         return;
+    }
     
     // Try to resize the renderer, multiple times if necessary
 	if (![_renderer resizeFromLayer:(CAEAGLLayer*)self.layer])

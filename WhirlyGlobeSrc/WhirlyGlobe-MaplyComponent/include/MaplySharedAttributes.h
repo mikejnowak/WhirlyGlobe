@@ -191,6 +191,9 @@
 /// Widened vectors are joined with a bevel
 #define kMaplyWideVecBevelJoin @"bevel"
 
+/// Number of pixels to use in blending the edges of the wide vectors
+#define kMaplyWideVecEdgeFalloff @"edgefalloff"
+
 /// For wide vectors we can control the ends
 /// See: http://www.w3.org/TR/SVG/painting.html#StrokeLinecapProperty
 //#define kMaplyWideVecLineCapType @"wideveclinecaptype"
@@ -204,7 +207,7 @@
 /// Widened vector ends are extended a bit and then flush
 //#define kMaplyWideVecSquareCap @"square"
 
-/// This number defines a limit past which the wide vector will switch from miters to bevels
+/// Miter joins will turn to bevel joins past this number of degrees
 #define kMaplyWideVecMiterLimit @"miterLimit"
 
 /// This is the length you'd like the texture to start repeating after.

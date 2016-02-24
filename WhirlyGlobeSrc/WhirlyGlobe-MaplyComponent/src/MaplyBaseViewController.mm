@@ -64,6 +64,7 @@ using namespace WhirlyKit;
     [NSObject cancelPreviousPerformRequestsWithTarget:self selector:@selector(periodicPerfOutput) object:nil];
 
     [glView stopAnimation];
+    [glView shutdown];
     
     EAGLContext *oldContext = [EAGLContext currentContext];
     [sceneRenderer useContext];
@@ -120,7 +121,7 @@ using namespace WhirlyKit;
 - (void) dealloc
 {
     if (scene)
-        [self clear];
+        [self shutdown];
 }
 
 - (WhirlyKitView *) loadSetup_view
@@ -1370,6 +1371,10 @@ static const float PerfOutputDelay = 15.0;
         [self unregisterForPreviewingWithContext:previewingContext];
         previewingContext = nil;
     }
+}
+
+- (void)requirePanGestureRecognizerToFailForGesture:(UIGestureRecognizer *__nullable)other {
+    // Implement in derived class.
 }
 
 @end
